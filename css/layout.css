@@ -1,0 +1,45 @@
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
+  font-family: 'Newsreader', Georgia, serif; overflow-x: hidden; }
+a { color: inherit; text-decoration: none; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; }
+
+.screen { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+.stage { position: relative; flex: 1; display: flex; overflow: hidden; min-height: 560px; }
+.col { position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 44px 24px; overflow: hidden;
+  border-right: 1px solid var(--line); transition: background .5s; --size: 280px; }
+.col:last-child { border-right: 0; }
+.col-notes { flex-grow: 1.18; --size: 320px; }
+.col:hover { background: rgba(var(--accrgb), .08); }
+.col:focus-visible { outline-offset: -4px; background: rgba(var(--accrgb), .08); }
+.col .rule { margin-top: 16px; width: 26px; height: 1px; background: var(--acc); opacity: .7; transition: width .5s; }
+.col:hover .rule, .col:focus-visible .rule { width: 64px; }
+
+.kicker { margin-top: 34px; font: 400 10px 'JetBrains Mono', monospace; letter-spacing: .34em;
+  text-transform: uppercase; color: var(--acc); text-align: center; }
+.name { margin: 12px 0 0; font: italic 400 42px/1.04 'Fraunces', serif; letter-spacing: -.015em;
+  text-align: center; color: var(--fg); }
+.col-notes .name { font-size: 50px; }
+.tag { margin: 14px 0 0; max-width: 28ch; text-align: center; font: italic 400 16px/1.5 'Newsreader', serif; color: var(--muted); }
+
+#theme-toggle { position: absolute; top: 22px; right: 26px; z-index: 5; min-height: 44px; padding: 10px 20px;
+  border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--fg);
+  font: italic 400 16px 'Newsreader', serif; cursor: pointer; }
+#theme-toggle:hover { background: rgba(127,127,127,.16); }
+
+.banner { margin: 0; padding: 10px 16px; text-align: center; font: 400 12px/1.4 'JetBrains Mono', monospace;
+  color: var(--muted); border-top: 1px solid var(--line); background: var(--bg); }
+
+@media (max-width: 760px) {
+  .stage { flex-direction: column; min-height: 0; }
+  .col { flex: none; padding: 40px 20px; border-right: 0; border-bottom: 1px solid var(--line); --size: min(260px, 70vw); }
+  .col-notes { --size: min(280px, 74vw); }
+  .col:last-child { border-bottom: 0; }
+  .name, .col-notes .name { font-size: 38px; }
+  #theme-toggle { top: 12px; right: 12px; padding: 8px 16px; }
+  .col-hers { padding-top: 76px; }
+}

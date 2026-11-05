@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Our Journal</title>
+  <script>try{var t=localStorage.getItem('journal-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,400&family=JetBrains+Mono:wght@400&family=Newsreader:ital,wght@1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/sigil.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <main class="screen" id="screen-front">
+    <div class="stage">
+      <div class="stars" aria-hidden="true"></div>
+      <div class="shoot shoot-1" aria-hidden="true"></div>
+      <div class="shoot shoot-2" aria-hidden="true"></div>
+
+      <a class="col col-hers" href="#" data-door="hers" data-who="hers" aria-label="Hers">
+        <div class="glow"></div>
+        <div class="sigil">
+          <div class="ring-outer ro"></div>
+          <div class="ring-tick rt"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="tick-short" data-n="60" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".38"/><path data-sigil="tick-long" data-n="60" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".65"/></svg></div>
+          <div class="ring-dash rd"></div>
+          <div class="emblem"><svg viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><g transform="translate(50 50)"><ellipse rx="9" ry="22" cy="-17"/><ellipse rx="9" ry="22" cy="-17" transform="rotate(72)"/><ellipse rx="9" ry="22" cy="-17" transform="rotate(144)"/><ellipse rx="9" ry="22" cy="-17" transform="rotate(216)"/><ellipse rx="9" ry="22" cy="-17" transform="rotate(288)"/><circle r="4.5"/></g></svg></div>
+        </div>
+        <span class="kicker">Journal · Private</span>
+        <h2 class="name">Hers</h2>
+        <span class="rule"></span>
+        <p class="tag">Your private journal. Only you hold the key.</p>
+      </a>
+
+      <a class="col col-notes" href="#" data-door="notes" data-who="notes" aria-label="Notes">
+        <div class="glow"></div>
+        <div class="sigil">
+          <div class="ring-dots rp"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="dots" data-n="16" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".62"/></svg></div>
+          <div class="ring-outer ro"></div>
+          <div class="ring-tick rt"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="tick-short" data-n="72" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".38"/><path data-sigil="tick-long" data-n="72" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".65"/></svg></div>
+          <div class="ring-dash rd"></div>
+          <div class="emblem"><svg viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="38" cy="50" r="26"/><circle cx="62" cy="50" r="26"/><path d="M50 36C50 30 41 30 41 37C41 43 50 48 50 48C50 48 59 43 59 37C59 30 50 30 50 36Z" fill="currentColor" stroke="none" opacity=".85"/></svg></div>
+        </div>
+        <span class="kicker">Shared · Both</span>
+        <h2 class="name">Notes</h2>
+        <span class="rule"></span>
+        <p class="tag">Little letters for the two of us.</p>
+      </a>
+
+      <a class="col col-his" href="#" data-door="his" data-who="his" aria-label="His">
+        <div class="glow"></div>
+        <div class="sigil">
+          <div class="ring-outer ro"></div>
+          <div class="ring-tick rt"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="tick-short" data-n="60" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".38"/><path data-sigil="tick-long" data-n="60" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".65"/></svg></div>
+          <div class="ring-dash rd"></div>
+          <div class="emblem"><svg viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M50 8L57 43L92 50L57 57L50 92L43 57L8 50L43 43Z"/><circle cx="50" cy="50" r="14"/><circle cx="50" cy="50" r="3"/></svg></div>
+        </div>
+        <span class="kicker">Journal · Private</span>
+        <h2 class="name">His</h2>
+        <span class="rule"></span>
+        <p class="tag">Your private journal. Only you hold the key.</p>
+      </a>
+
+      <button id="theme-toggle" type="button">Light mode</button>
+    </div>
+  </main>
+  <p id="sample-banner" class="banner" role="note" hidden>Sample mode: entries stay on this device only and aren't private or backed up.</p>
+</body>
+</html>

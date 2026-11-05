@@ -1,0 +1,44 @@
+.sigil { position: relative; width: var(--size, 280px); height: var(--size, 280px);
+  display: flex; align-items: center; justify-content: center; color: var(--acc); }
+.sigil > * { position: absolute; }
+.sigil svg { width: 100%; height: 100%; overflow: visible; }
+
+.ring-outer { inset: 0; border-radius: 50%; border: 1px solid rgba(var(--accrgb), var(--ringa));
+  box-shadow: 0 0 18px rgba(var(--accrgb), .12), inset 0 0 16px rgba(var(--accrgb), .06); }
+.ring-tick { inset: 9%; }
+.ring-dash { inset: 20%; border-radius: 50%; border: 1px dashed rgba(var(--accrgb), var(--dasha)); }
+.ring-dots { inset: -3%; }
+.emblem { width: 44%; height: 44%; opacity: .86; filter: drop-shadow(0 0 12px rgba(var(--accrgb), var(--embglow))); }
+
+.ro { animation: cw 110s linear infinite; }
+.rt { animation: ccw 70s linear infinite; }
+.rd { animation: cw 40s linear infinite; }
+.rp { animation: ccw 95s linear infinite; }
+.col:hover .ro, .col:focus-visible .ro { animation-duration: 26s; }
+.col:hover .rt, .col:focus-visible .rt { animation-duration: 16s; }
+.col:hover .rd, .col:focus-visible .rd { animation-duration: 10s; }
+
+.glow { position: absolute; top: 42%; left: 50%; width: 130%; aspect-ratio: 1; border-radius: 50%;
+  transform: translate(-50%, -50%); pointer-events: none;
+  background: radial-gradient(circle, rgba(var(--accrgb), var(--glowa)) 0%, rgba(var(--accrgb), .07) 36%, transparent 64%); }
+
+.stars { position: absolute; inset: 0; pointer-events: none; opacity: var(--stars);
+  background-image: radial-gradient(1.2px 1.2px at 7% 16%,#fff,transparent),radial-gradient(1px 1px at 18% 61%,rgba(255,255,255,.6),transparent),radial-gradient(1.3px 1.3px at 29% 9%,#fff,transparent),radial-gradient(1px 1px at 41% 82%,rgba(255,255,255,.55),transparent),radial-gradient(1.2px 1.2px at 52% 22%,#fff,transparent),radial-gradient(1px 1px at 63% 70%,rgba(255,255,255,.6),transparent),radial-gradient(1.3px 1.3px at 74% 12%,#fff,transparent),radial-gradient(1px 1px at 86% 54%,rgba(255,255,255,.55),transparent),radial-gradient(1px 1px at 94% 86%,rgba(255,255,255,.5),transparent); }
+.shoot { position: absolute; height: 1px; width: 150px; opacity: 0; pointer-events: none;
+  background: linear-gradient(90deg, transparent, #fff); animation: shoot 11s linear infinite; }
+.shoot-1 { top: 90px; left: 100px; }
+.shoot-2 { top: 210px; left: 60%; animation-delay: 5s; }
+:root[data-theme="light"] .shoot, :root[data-theme="light"] .stars { display: none; }
+
+@keyframes cw { to { transform: rotate(360deg); } }
+@keyframes ccw { to { transform: rotate(-360deg); } }
+@keyframes shoot {
+  0% { transform: translate(0,0) rotate(24deg); opacity: 0; }
+  2% { opacity: .9; }
+  9% { transform: translate(380px,170px) rotate(24deg); opacity: 0; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ro, .rt, .rd, .rp, .shoot { animation: none; }
+  .col, .col .rule { transition: none; }
+}

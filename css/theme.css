@@ -1,0 +1,22 @@
+:root, :root[data-theme="dark"] {
+  --bg: #0e0d14; --fg: #eae6f5; --muted: #a09ab4; --line: rgba(255,255,255,0.09);
+  --ringa: .34; --dasha: .4; --glowa: .22; --embglow: .4; --stars: 1;
+  --hers: #f472b6; --hers-rgb: 244,114,182;
+  --notes: #b18cf0; --notes-rgb: 177,140,240;
+  --his: #60a5fa; --his-rgb: 96,165,250;
+  --acc: var(--notes); --accrgb: var(--notes-rgb);
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #f0ead8; --fg: #2c1f0e; --muted: #5e4d34; --line: rgba(44,31,14,0.16);
+  --ringa: .5; --dasha: .55; --glowa: .2; --embglow: 0; --stars: 0;
+  --hers: #a8316a; --hers-rgb: 168,49,106;
+  --notes: #6a45b3; --notes-rgb: 106,69,179;
+  --his: #2f5aa3; --his-rgb: 47,90,163;
+  color-scheme: light;
+}
+[data-who="hers"]  { --acc: var(--hers);  --accrgb: var(--hers-rgb); }
+[data-who="notes"] { --acc: var(--notes); --accrgb: var(--notes-rgb); }
+[data-who="his"]   { --acc: var(--his);   --accrgb: var(--his-rgb); }
+
+body { background: var(--bg); color: var(--fg); transition: background .4s, color .4s; }
