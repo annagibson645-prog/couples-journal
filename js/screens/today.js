@@ -324,7 +324,7 @@ export function createToday({ data, showScreen, rail = { show() {} }, document: 
   return {
     async show(door) {
       who = door === 'his' ? 'his' : 'hers';
-      flushDraft(); // a draft still waiting from before is saved, then restored below
+      await flushDraft(); // a draft still waiting from before is saved, then restored below
       resetView();
       const t = token;
       day = dayKey(now());

@@ -3,7 +3,7 @@
 Date: 2026-11-05 · Status: draft for review (nothing built yet)
 
 ## Purpose
-A private journaling site for a friend and her husband. Each has a private journal with a daily mood and written entries. A shared "Notes" space lets them leave notes for each other. Inspired by the look and feel of the Sadhana Yatra tracker (mood charts, notes, a record to look back on), but a separate project with a fresh codebase.
+A private journaling site for a friend and her husband. Each has a private journal with a daily mood and written entries. A shared "Notes" space lets them leave notes for each other. Inspired by the look and feel of the owner's earlier progress tracker (mood charts, notes, a record to look back on), but a separate project with a fresh codebase.
 
 ## Constraints
 - Cost: free. Hosting on GitHub Pages (no Netlify). Backend on Firebase free tier.
@@ -21,7 +21,7 @@ A private journaling site for a friend and her husband. Each has a private journ
 | Accounts | Two accounts, created manually. Open sign-up disabled |
 | Mood | One score per day (1–10) with an optional note. No layered scores |
 | Exports | Readable formats first; JSON backup hidden under "Advanced" |
-| Look | **Orbital sigils**, borrowed from the Council page of the NylusS app: three full-height columns, each with a glowing symbol inside slowly turning rings. Hers pink, His blue, Notes violet (the two blended). A light (parchment) and dark (night) mode with a switch. Design reference: the canvas at https://claude.ai/artifact/BnVjzUrRLb8PiTm21RRhzf |
+| Look | **Orbital sigils**, borrowed from an earlier app of the owner's: three full-height columns, each with a glowing symbol inside slowly turning rings. Hers pink, His blue, Notes violet (the two blended). A light (parchment) and dark (night) mode with a switch. Design reference: the private design canvas (not published) |
 
 ## Screens
 All screens use the Orbital sigils look and have a Light mode / Dark mode switch. Hers and His are the same pages with a different accent (pink or blue) and symbol (a flower for Hers, a star for His). Notes uses violet and a symbol of two overlapping circles with a heart.

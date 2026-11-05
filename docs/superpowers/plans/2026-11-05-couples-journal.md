@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-11-05-couples-journal-design.md`
 
-**Design reference:** the canvas at https://claude.ai/artifact/BnVjzUrRLb8PiTm21RRhzf. Build from its boards: `Main` (front page), `SignIn`, `Today`, `LookBack`, `Save`, `Notes` and their `His…` twins. Each board's markup, colours and copy are the target; the canvas versions use fake data.
+**Design reference:** the private design canvas (not published). Build from its boards: `Main` (front page), `SignIn`, `Today`, `LookBack`, `Save`, `Notes` and their `His…` twins. Each board's markup, colours and copy are the target; the canvas versions use fake data.
 
 ## Global Constraints
 - Free only: GitHub Pages + Firebase free tier. No paid services, no Netlify.

@@ -413,6 +413,14 @@ test('the viewer switch is hidden outside sample mode', async () => {
   assert.equal($('nt-switch').hidden, true);
 });
 
+test('outside sample mode, pressing the switch does nothing (no sign-in)', async () => {
+  const { screen, $, calls } = setup({ notes: SAMPLE });
+  await screen.show('hers');
+  $('nt-switch').click(); await tick(); await tick();
+  assert.deepEqual(calls.signIn, []);
+  assert.equal(calls.order.length, 0);
+});
+
 test('in sample mode the switch is a real button naming who is seen and who is next', async () => {
   const { screen, $ } = setup({ notes: SAMPLE, screen: { demo: true } });
   await screen.show('hers');

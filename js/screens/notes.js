@@ -252,6 +252,7 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
 
   let switching = false;
   async function switchViewer() {
+    if (!demo) return;
     if (switching) return;
     switching = true;
     const tk = token;
