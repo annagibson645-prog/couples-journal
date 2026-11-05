@@ -1,17 +1,17 @@
-/* Journal screens (Today, later Look back and Save). The rail sigil is cloned
+/* Journal screens (Today, Look back, later Save and Notes). The shared left rail is .rail. The rail sigil is cloned
    from the front page and drawn by sigil.css; colours come from theme.css. */
-.today { flex-direction: row; }
-.td-rail { position: relative; flex: 0 0 340px; border-right: 1px solid var(--line); overflow: hidden; }
-.td-rail-in { position: sticky; top: 56px; display: flex; flex-direction: column; align-items: center;
+.jscreen { flex-direction: row; }
+.rail { position: relative; flex: 0 0 340px; border-right: 1px solid var(--line); overflow: hidden; }
+.rail-in { position: sticky; top: 56px; display: flex; flex-direction: column; align-items: center;
   padding: 56px 24px 40px; }
-.td-sigil { --size: 230px; position: relative; display: flex; justify-content: center; }
-.td-rail .kicker { margin-top: 26px; }
-.td-name { font-size: 44px; }
-.td-nav { position: relative; margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+.rail-sigil { --size: 230px; position: relative; display: flex; justify-content: center; }
+.rail .kicker { margin-top: 26px; }
+.rail-name { font-size: 44px; }
+.rail-nav { position: relative; margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 2px;
   font: italic 400 19px 'Newsreader', serif; }
-.td-nav button { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; margin: 0; border: 0;
+.rail-nav button { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; margin: 0; border: 0;
   background: none; cursor: pointer; font: inherit; color: var(--muted); transition: color .2s; }
-.td-nav button:hover, .td-nav button[aria-current="page"] { color: var(--acc); }
+.rail-nav button:hover, .rail-nav button[aria-current="page"] { color: var(--acc); }
 
 .td-main { flex: 1; min-width: 0; padding: 40px 60px 56px 56px; display: flex; flex-direction: column;
   max-width: 900px; }
@@ -61,13 +61,13 @@
 .td-danger { color: var(--fg); }
 
 @media (max-width: 760px) {
-  .today { flex-direction: column; }
-  .td-rail { flex: none; border-right: 0; border-bottom: 1px solid var(--line); }
-  .td-rail-in { position: relative; top: 0; padding: 24px 16px 12px; }
-  .td-sigil { --size: 120px; }
-  .td-rail .kicker { margin-top: 16px; }
-  .td-name { font-size: 34px; margin-top: 6px; }
-  .td-nav { margin-top: 10px; flex-direction: row; flex-wrap: wrap; justify-content: center; }
+  .jscreen { flex-direction: column; }
+  .rail { flex: none; border-right: 0; border-bottom: 1px solid var(--line); }
+  .rail-in { position: relative; top: 0; padding: 24px 16px 12px; }
+  .rail-sigil { --size: 120px; }
+  .rail .kicker { margin-top: 16px; }
+  .rail-name { font-size: 34px; margin-top: 6px; }
+  .rail-nav { margin-top: 10px; flex-direction: row; flex-wrap: wrap; justify-content: center; }
   .td-main { padding: 24px 16px 40px; max-width: none; }
   .td-date { font-size: 34px; }
   .td-moons { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; max-width: 360px; }
@@ -75,4 +75,4 @@
   .td-word { font-size: 24px; }
   .td-text { font-size: 18px; }
 }
-@media (prefers-reduced-motion: reduce) { .td-nav button { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rail-nav button { transition: none; } }

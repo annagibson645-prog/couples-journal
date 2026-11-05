@@ -16,6 +16,7 @@ export class El {
   get isConnected() { for (let e = this; e; e = e.parent) if (e.root) return true; return false; }
   cloneNode() { return new El(this.doc, this.tag); }
   addEventListener(t, f) { (this.listeners[t] ||= []).push(f); }
+  dispatchEvent(ev) { for (const f of this.listeners[ev.type] || []) f(ev); return true; }
   dispatch(t, ev = {}) { for (const f of this.listeners[t] || []) f({ preventDefault() {}, ...ev }); }
   click() { if (!this.disabled) this.dispatch('click'); }
   // Like a browser: a detached element cannot take focus.
@@ -24,8 +25,23 @@ export class El {
   byClass(cls) { return this.find((c) => c.className.split(' ').includes(cls)); }
 }
 
-const IDS = ['td-sigil', 'td-name', 'td-date', 'td-moons', 'td-word', 'td-note', 'td-text', 'td-save', 'td-status',
+const IDS = ['td-date', 'td-moons', 'td-word', 'td-note', 'td-text', 'td-save', 'td-status',
   'td-error', 'td-hint', 'td-count', 'td-list', 'td-empty', 'td-entries-title'];
+
+// Ids the Look back screen needs.
+export const LOOKBACK_IDS = ['lb-title', 'lb-sub', 'lb-error', 'lb-empty', 'lb-empty-today', 'lb-chart', 'lb-month', 'lb-prev', 'lb-next',
+  'lb-grid', 'lb-day-prompt', 'lb-day-body', 'lb-day-name', 'lb-day-path', 'lb-day-word', 'lb-day-note', 'lb-day-empty', 'lb-day-entries'];
+
+export function makeLookbackDom() {
+  const doc = { activeElement: null, byId: {} };
+  doc.createElement = (t) => new El(doc, t);
+  doc.createElementNS = (_ns, t) => new El(doc, t);
+  doc.getElementById = (id) => doc.byId[id] || null;
+  doc.querySelector = () => null;
+  doc.querySelectorAll = () => [];
+  for (const id of LOOKBACK_IDS) { doc.byId[id] = new El(doc, 'x'); doc.byId[id].root = true; }
+  return doc;
+}
 
 export function makeDom() {
   const doc = { activeElement: null, byId: {}, nav: [] };
@@ -35,8 +51,5 @@ export function makeDom() {
   doc.querySelector = () => null;
   doc.querySelectorAll = () => doc.nav;
   for (const id of IDS) { doc.byId[id] = new El(doc, 'x'); doc.byId[id].root = true; }
-  for (const n of ['today', 'lookback', 'save', 'signout']) {
-    const b = new El(doc, 'button'); b.dataset.nav = n; doc.nav.push(b);
-  }
   return doc;
 }

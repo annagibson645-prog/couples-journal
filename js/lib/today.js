@@ -4,8 +4,8 @@ import { isValidScore } from './moodlogic.js';
 
 export const MOOD_WORDS = ['Very heavy', 'Heavy', 'Low', 'A bit low', 'Even', 'Steady', 'Mostly bright', 'Bright', 'Glowing', 'Full and light'];
 
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 // Word for a mood score, or '' when the score is not an integer 1-10.
 export function moodWord(score) {

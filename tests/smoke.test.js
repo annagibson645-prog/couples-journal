@@ -33,10 +33,26 @@ test('door links are labelled by their name heading', () => {
 });
 
 test('today screen has the moon group, writing box, save button and an alert area', () => {
-  for (const id of ['screen-today', 'td-moons', 'td-note', 'td-text', 'td-save', 'td-list', 'td-nav']) {
+  for (const id of ['screen-today', 'td-moons', 'td-note', 'td-text', 'td-save', 'td-list']) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
   assert.match(html, /id="td-error"[^>]*role="alert"/);
   assert.match(html, />Nothing here yet\. Write whenever you're ready\.</);
   assert.match(html, /href="css\/journal\.css"/);
+});
+
+test('every journal screen has the one shared rail, filled by js/screens/rail.js', () => {
+  for (const name of ['today', 'lookback']) assert.match(html, new RegExp(`<aside class="rail" data-rail="${name}"></aside>`));
+  assert.doesNotMatch(html, /id="td-nav"/);
+});
+
+test('look back screen has the chart, calendar, day panel, an alert area and the gentle empty prompt', () => {
+  for (const id of ['screen-lookback', 'lb-chart', 'lb-month', 'lb-prev', 'lb-next', 'lb-grid', 'lb-day-body', 'lb-day-entries', 'lb-empty-today']) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  assert.match(html, /id="lb-error"[^>]*role="alert"/);
+  assert.match(html, />No moods yet\. Choose a moon on Today and it will appear here\.</);
+  assert.match(html, /aria-label="Previous month"/);
+  assert.match(html, /aria-label="Next month"/);
+  assert.match(html, /href="css\/chart\.css"/);
 });

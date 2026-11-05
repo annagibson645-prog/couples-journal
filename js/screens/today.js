@@ -2,30 +2,19 @@
 // this person's entries. Every piece of user text goes in with textContent.
 import { moonPath } from '../lib/sigil.js';
 import { dayKey } from '../lib/days.js';
-import { moodWord, moodLabel, moonFraction, formatDateHeading, entryWhen, wordCount, formatWordCount, needsCollapse } from '../lib/today.js';
+import { moodWord, moodLabel, moonFraction, formatDateHeading, entryWhen, wordCount, formatWordCount } from '../lib/today.js';
+import { makeEl, messageOf, collapsibleText } from './shared.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const LABEL = { hers: 'Hers', his: 'His' };
 const NOTHING_TO_SAVE = 'There is nothing to save yet. Write a few words first, then save.';
 const SAVED = 'Saved on this device, then synced';
 const REFRESH_FAILED = "Saved, but we couldn't refresh the list. Reopen Today to see it.";
 
-function makeEl(doc) {
-  return (tag, className, text) => {
-    const e = doc.createElement(tag);
-    if (className) e.className = className;
-    if (text !== undefined) e.textContent = text;
-    return e;
-  };
-}
-// A friendly adapter message if there is one; otherwise a plain fallback.
-function messageOf(err, fallback) {
-  return err instanceof Error && err.message ? err.message : fallback;
-}
-
-// deps: { data, showScreen, onNavigate(name), onSignOut(), document?, now?, debounceMs? }
+// deps: { data, showScreen, rail?, document?, now?, debounceMs? }
+// `rail` is the shared left rail (js/screens/rail.js); it owns navigation, so
+// the app calls leave() before moving away from Today.
 // `document` and `now` default to the real ones; tests pass stand-ins.
-export function createToday({ data, showScreen, onNavigate, onSignOut, document: doc = globalThis.document, now = () => new Date(), debounceMs = 600 }) {
+export function createToday({ data, showScreen, rail = { show() {} }, document: doc = globalThis.document, now = () => new Date(), debounceMs = 600 }) {
   const el = makeEl(doc);
   const $ = (id) => doc.getElementById(id);
   let who = 'hers';
@@ -178,14 +167,8 @@ export function createToday({ data, showScreen, onNavigate, onSignOut, document:
   }
 
   // --- entries -------------------------------------------------------------
-  // A long entry shows about 8 lines until Read more is pressed. Whether it
-  // overflows is measured when the browser can lay it out, guessed otherwise.
-  function overflows(p, text) {
-    if (typeof p.scrollHeight === 'number' && p.clientHeight > 0) return p.scrollHeight > p.clientHeight + 1;
-    return needsCollapse(text);
-  }
   function remeasure() {
-    for (const r of rows) if (!expanded.has(r.entry.id)) r.more.hidden = !overflows(r.p, r.entry.text);
+    for (const r of rows) r.remeasure();
   }
 
   // `focus` ({ id, kind: 'yes' | 'delete' }) says which freshly drawn button to
@@ -200,22 +183,9 @@ export function createToday({ data, showScreen, onNavigate, onSignOut, document:
     for (const entry of entries) {
       const li = el('li', 'td-entry');
       li.appendChild(el('p', 'td-when', entryWhen(entry, today)));
-      const open = expanded.has(entry.id);
-      const p = el('p', open ? 'td-text' : 'td-text td-clamp', entry.text);
-      li.appendChild(p);
-      const more = el('button', 'td-link td-more', open ? 'Show less' : 'Read more');
-      more.type = 'button';
-      more.hidden = !open;
-      more.setAttribute('aria-expanded', String(open));
-      more.addEventListener('click', () => {
-        const nowOpen = !expanded.has(entry.id);
-        if (nowOpen) expanded.add(entry.id); else expanded.delete(entry.id);
-        p.className = nowOpen ? 'td-text' : 'td-text td-clamp';
-        more.textContent = nowOpen ? 'Show less' : 'Read more';
-        more.setAttribute('aria-expanded', String(nowOpen));
-      });
-      li.appendChild(more);
-      rows.push({ entry, p, more });
+      const text = collapsibleText(doc, entry.id, entry.text, expanded);
+      li.append(text.p, text.more);
+      rows.push(text);
       const actions = el('div', 'td-entry-actions');
       if (confirming === entry.id) {
         actions.appendChild(el('span', 'td-confirm-q', 'Delete this entry?'));
@@ -314,24 +284,6 @@ export function createToday({ data, showScreen, onNavigate, onSignOut, document:
     }
   }
 
-  // --- rail ----------------------------------------------------------------
-  function setSigil() {
-    const src = doc.querySelector(`.col-${who} .sigil`);
-    const host = $('td-sigil');
-    host.replaceChildren();
-    if (src) host.appendChild(src.cloneNode(true));
-  }
-
-  async function setName() {
-    const t = token;
-    $('td-name').textContent = LABEL[who];
-    try {
-      const members = await data.getMembers();
-      const name = members && members.names && members.names[who];
-      if (t === token && typeof name === 'string' && name) $('td-name').textContent = name;
-    } catch (e) { /* the default label stands */ }
-  }
-
   function resetView() {
     token += 1;
     score = null;
@@ -368,15 +320,6 @@ export function createToday({ data, showScreen, onNavigate, onSignOut, document:
   doc.addEventListener?.('visibilitychange', () => { if (doc.visibilityState === 'hidden') flushDraft(); });
   globalThis.addEventListener?.('resize', remeasure);
   doc.fonts?.ready?.then(remeasure);
-  for (const a of doc.querySelectorAll('#td-nav button[data-nav]')) {
-    a.addEventListener('click', (e) => {
-      e.preventDefault();
-      const to = a.dataset.nav;
-      if (to === 'signout') { cancelDraft(); onSignOut(); }
-      else if (to !== 'today') { flushDraft(); onNavigate(to); }
-    });
-  }
-
   return {
     async show(door) {
       who = door === 'his' ? 'his' : 'hers';
@@ -385,10 +328,9 @@ export function createToday({ data, showScreen, onNavigate, onSignOut, document:
       const t = token;
       day = dayKey(now());
       $('td-date').textContent = formatDateHeading(now());
-      setSigil();
+      rail.show(who, data);
       showScreen('today', who);
       $('td-date').focus();
-      setName();
       try {
         const draft = await data.getDraft();
         if (t === token && typeof draft === 'string' && !$('td-text').value) {
@@ -413,6 +355,8 @@ export function createToday({ data, showScreen, onNavigate, onSignOut, document:
         if (t === token) setError(messageOf(err, 'Could not open your journal.'));
       }
     },
+    // Called by the app before it moves to another screen: save a waiting draft.
+    leave: flushDraft,
     // Wipe everything typed or shown (sign-out on a shared device).
     clear: resetView,
   };

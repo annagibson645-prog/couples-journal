@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="css/sigil.css">
   <link rel="stylesheet" href="css/signin.css">
   <link rel="stylesheet" href="css/journal.css">
+  <link rel="stylesheet" href="css/chart.css">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
@@ -103,21 +104,8 @@
     </section>
   </main>
 
-  <main class="screen today" id="screen-today" hidden>
-    <aside class="td-rail">
-      <div class="td-rail-in">
-        <div class="glow"></div>
-        <div class="td-sigil" id="td-sigil"></div>
-        <span class="kicker">Journal · Private</span>
-        <p class="name td-name" id="td-name">Hers</p>
-        <nav id="td-nav" class="td-nav" aria-label="Sections">
-          <button type="button" data-nav="today" aria-current="page">Today</button>
-          <button type="button" data-nav="lookback">Look back</button>
-          <button type="button" data-nav="save">Save your journal</button>
-          <button type="button" data-nav="signout">Sign out</button>
-        </nav>
-      </div>
-    </aside>
+  <main class="screen jscreen today" id="screen-today" hidden>
+    <aside class="rail" data-rail="today"></aside>
     <section class="td-main">
       <h1 class="td-date" id="td-date" tabindex="-1"></h1>
       <p class="td-q" id="td-q">How was today?</p>
@@ -138,6 +126,44 @@
         <p class="td-empty" id="td-empty" hidden>Nothing here yet. Write whenever you're ready.</p>
         <ul class="td-list" id="td-list"></ul>
       </section>
+    </section>
+  </main>
+
+  <main class="screen jscreen lookback" id="screen-lookback" hidden>
+    <aside class="rail" data-rail="lookback"></aside>
+    <section class="td-main lb-main">
+      <h1 class="td-date" id="lb-title" tabindex="-1">Looking back</h1>
+      <p class="lb-sub" id="lb-sub">Your mood over the last 30 days.</p>
+      <p class="td-error" id="lb-error" role="alert" hidden></p>
+      <div class="lb-empty" id="lb-empty" hidden>
+        <p>No moods yet. Choose a moon on Today and it will appear here.</p>
+        <button class="si-go" id="lb-empty-today" type="button">Go to Today</button>
+      </div>
+      <div class="ch" id="lb-chart"></div>
+      <div class="lb-below">
+        <div class="lb-cal">
+          <div class="lb-cal-head">
+            <button class="lb-step" id="lb-prev" type="button" aria-label="Previous month">&#8249;</button>
+            <h2 class="lb-month" id="lb-month" aria-live="polite"></h2>
+            <button class="lb-step" id="lb-next" type="button" aria-label="Next month">&#8250;</button>
+          </div>
+          <div class="lb-week" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+          <div class="lb-grid" id="lb-grid"></div>
+        </div>
+        <section class="lb-day" aria-live="polite" aria-label="Chosen day">
+          <p class="lb-day-prompt" id="lb-day-prompt"></p>
+          <div id="lb-day-body" hidden>
+            <p class="lb-day-name" id="lb-day-name"></p>
+            <div class="lb-day-mood">
+              <svg viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="17" fill="none" stroke="currentColor" stroke-opacity=".55"/><path id="lb-day-path" fill="currentColor"/></svg>
+              <p class="lb-day-word" id="lb-day-word"></p>
+            </div>
+            <p class="lb-day-note" id="lb-day-note"></p>
+            <p class="td-empty" id="lb-day-empty">No entry written that day.</p>
+            <ul class="td-list" id="lb-day-entries"></ul>
+          </div>
+        </section>
+      </div>
     </section>
   </main>
 

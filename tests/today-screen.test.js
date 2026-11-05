@@ -24,7 +24,7 @@ function setup(overrides = {}, nowFn) {
     saveMood: async (...a) => { calls.saveMood.push(a); },
     ...overrides.data,
   };
-  const today = createToday({ data, document: doc, now: nowFn || (() => new Date(2026, 10, 5, 10, 0)), debounceMs: 5, showScreen() {}, onNavigate() {}, onSignOut() {} });
+  const today = createToday({ data, document: doc, now: nowFn || (() => new Date(2026, 10, 5, 10, 0)), debounceMs: 5, showScreen() {} });
   return { doc, data, calls, today, draftNow: () => draft, $: (id) => doc.byId[id] };
 }
 const entry = (id, text) => ({ id, day: '2026-11-05', text, createdAt: new Date(2026, 10, 5, 9, 0).getTime() });
@@ -180,7 +180,7 @@ test('leaving Today flushes a pending draft so navigating away loses nothing', a
   await today.show('hers');
   $('td-text').value = 'about to leave';
   $('td-text').dispatch('input');
-  doc.nav.find((b) => b.dataset.nav === 'lookback').click();
+  today.leave(); // the app calls this when the rail moves away from Today
   await tick();
   assert.deepEqual(calls.saveDraft, ['about to leave']);
 });

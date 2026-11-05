@@ -4,6 +4,8 @@ import { data } from './data/index.js';
 import { gateFor } from './doors.js';
 import { createSignIn } from './screens/signin.js';
 import { createToday } from './screens/today.js';
+import { createLookback } from './screens/lookback.js';
+import { createRail } from './screens/rail.js';
 
 // Duplicated in the inline pre-paint script in index.html; keep in sync.
 const THEME_KEY = 'journal-theme';
@@ -83,18 +85,27 @@ function init() {
   });
   const banner = document.getElementById('sample-banner');
   if (banner) banner.hidden = MODE !== 'demo';
-  const today = createToday({
-    data,
-    showScreen,
-    onNavigate: (name) => {
-      // Look back and Save your journal replace this stand-in in later tasks.
-      const title = name === 'save' ? 'Save your journal' : 'Look back';
-      showGate(title, 'This part of the journal arrives in the next build step.', data.currentSession()?.door, true, true);
-    },
-    onSignOut: signOut,
-  });
+  // One rail component, one instance per journal screen; sections share one router.
+  const railFor = (current) => createRail({ host: document.querySelector(`[data-rail="${current}"]`), current, onNavigate: navigate });
+  const rails = [railFor('today'), railFor('lookback')];
+  const today = createToday({ data, showScreen, rail: rails[0] });
+  const lookback = createLookback({ data, showScreen, rail: rails[1], onNavigate: navigate });
+  function navigate(name) {
+    today.leave(); // saves a draft that was still waiting
+    if (name === 'signout') { signOut(); return; }
+    const session = data.currentSession();
+    if (!session) { showScreen('front'); return; }
+    if (name === 'today') today.show(session.door);
+    else if (name === 'lookback') lookback.show(session.door);
+    else if (name === 'save') {
+      // Save your journal replaces this stand-in in a later task.
+      showGate('Save your journal', 'This part of the journal arrives in the next build step.', session.door, true, true);
+    }
+  }
   async function signOut() {
     today.clear();
+    lookback.clear();
+    for (const r of rails) r.clear();
     try { await data.signOut(); } finally { showScreen('front'); }
   }
   const signIn = createSignIn({
