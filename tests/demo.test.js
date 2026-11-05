@@ -286,3 +286,31 @@ test('a 50,000-character entry and draft round-trip quickly', async () => {
   assert.equal(await data.getDraft(), big);
   assert.ok(Date.now() - t0 < 2000);
 });
+
+test('drafts: a saved entry clears the draft even when removeItem throws, also after a restart', async () => {
+  const storage = new MemoryStorage();
+  const data = createDemoAdapter(storage);
+  await data.signIn('hers');
+  await data.saveDraft('old draft text');
+  storage.removeItem = () => { throw new Error('blocked'); };
+  await data.addEntry('old draft text');
+  await data.saveDraft('');
+  assert.equal(await data.getDraft(), '');
+  const again = createDemoAdapter(storage);
+  await again.signIn('hers');
+  assert.equal(await again.getDraft(), '');
+});
+
+test('drafts: signOut with a throwing removeItem leaves no readable draft', async () => {
+  const storage = new MemoryStorage();
+  const data = createDemoAdapter(storage);
+  await data.signIn('hers');
+  await data.saveDraft('private words');
+  storage.removeItem = () => { throw new Error('blocked'); };
+  await data.signOut();
+  await data.signIn('hers');
+  assert.equal(await data.getDraft(), '');
+  const again = createDemoAdapter(storage);
+  await again.signIn('hers');
+  assert.equal(await again.getDraft(), '');
+});

@@ -108,7 +108,10 @@ export function createDemoAdapter(given) {
           if (k && k.startsWith(PREFIX)) doomed.push(k);
         }
         for (const k of doomed) {
-          try { storage.removeItem(k); } catch (e) { /* keep going */ }
+          try { storage.removeItem(k); } catch (e) {
+            // A draft must not stay readable: overwrite its text, best effort.
+            if (k.startsWith(PREFIX + 'draft:')) { try { storage.setItem(k, JSON.stringify('')); } catch (e2) { /* nothing more to do */ } }
+          }
         }
       } catch (e) { /* storage unreadable: nothing more to clear */ }
     },
@@ -149,8 +152,11 @@ export function createDemoAdapter(given) {
         else storage.removeItem(PREFIX + key);
         delete memDrafts[s.door];
       } catch (e) {
-        if (value) memDrafts[s.door] = value;
-        else delete memDrafts[s.door];
+        if (!value) {
+          // Removal failed: blank the stored text instead, so the old draft can
+          // never come back. If even that fails, remember "no draft" in memory.
+          try { storage.setItem(PREFIX + key, JSON.stringify('')); delete memDrafts[s.door]; } catch (e2) { memDrafts[s.door] = ''; }
+        } else memDrafts[s.door] = value;
       }
     },
 
