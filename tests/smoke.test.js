@@ -38,7 +38,7 @@ test('today screen has the moon group, writing box, save button and an alert are
   }
   assert.match(html, /id="td-error"[^>]*role="alert"/);
   assert.match(html, />Nothing here yet\. Write whenever you're ready\.</);
-  assert.match(html, /href="css\/journal\.css"/);
+  assert.match(html, /href="css\/app\.css"/); // journal.css is one of its sources
 });
 
 test('every journal screen has the one shared rail, filled by js/screens/rail.js', () => {
@@ -54,5 +54,5 @@ test('look back screen has the chart, calendar, day panel, an alert area and the
   assert.match(html, />No moods yet\. Choose a moon on Today and it will appear here\.</);
   assert.match(html, /aria-label="Previous month"/);
   assert.match(html, /aria-label="Next month"/);
-  assert.match(html, /href="css\/chart\.css"/);
+  assert.match(html, /href="css\/app\.css"/); // chart.css is one of its sources
 });
