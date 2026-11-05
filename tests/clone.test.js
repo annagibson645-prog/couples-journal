@@ -32,7 +32,7 @@ test('the demo adapter still works when structuredClone does not exist (older iP
     const d = createDemoAdapter(storage);
     await d.getMembers();
     await d.signIn('hers');
-    assert.ok(Array.isArray(await d.getEntries()));
+    assert.ok(Array.isArray(await d.listEntries()));
     assert.equal(typeof (await d.getMoods()), 'object');
   } finally {
     if (saved) globalThis.structuredClone = saved;
