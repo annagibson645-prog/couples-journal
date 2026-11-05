@@ -1,5 +1,6 @@
 // Demo adapter: implements the data interface (see contract.md) over
 // localStorage. Not secure and not private: sample mode only.
+import { cloneData } from '../lib/clone.js';
 import { dayKey } from '../lib/days.js';
 import { isValidScore } from '../lib/moodlogic.js';
 import { buildSeed } from './sample-seed.js';
@@ -118,7 +119,7 @@ export function createDemoAdapter(given) {
 
     currentSession() { return session; },
 
-    async getMembers() { return structuredClone(MEMBERS); },
+    async getMembers() { return cloneData(MEMBERS); },
 
     async saveMood(day, score, note) {
       if (typeof day !== 'string' || !DAY_RE.test(day)) throw new Error('Invalid day.');
@@ -127,7 +128,7 @@ export function createDemoAdapter(given) {
       commit({ ...m, moods: { ...m.moods, [day]: note ? { score, note: String(note) } : { score } } });
     },
 
-    async getMoods() { return structuredClone(mine().moods); },
+    async getMoods() { return cloneData(mine().moods); },
 
     async addEntry(text, now = new Date()) {
       if (typeof text !== 'string' || !text.trim()) throw new Error('Write something first.');
@@ -138,7 +139,7 @@ export function createDemoAdapter(given) {
     },
 
     async listEntries() {
-      return structuredClone(mine().entries).sort((a, b) => b.createdAt - a.createdAt);
+      return cloneData(mine().entries).sort((a, b) => b.createdAt - a.createdAt);
     },
 
     // The unsent writing box, one per person. Never throws on a storage
