@@ -5,6 +5,7 @@ import { gateFor } from './doors.js';
 import { createSignIn } from './screens/signin.js';
 import { createToday } from './screens/today.js';
 import { createLookback } from './screens/lookback.js';
+import { createExport } from './screens/export.js';
 import { createRail } from './screens/rail.js';
 import { createRouter } from './router.js';
 
@@ -88,10 +89,11 @@ function init() {
   if (banner) banner.hidden = MODE !== 'demo';
   // One rail component, one instance per journal screen; sections share one router.
   const railFor = (current) => createRail({ host: document.querySelector(`[data-rail="${current}"]`), current, onNavigate: (k) => router.navigate(k) });
-  const rails = [railFor('today'), railFor('lookback')];
+  const rails = [railFor('today'), railFor('lookback'), railFor('save')];
   const today = createToday({ data, showScreen, rail: rails[0] });
   const lookback = createLookback({ data, showScreen, rail: rails[1], onNavigate: (k) => router.navigate(k) });
-  const router = createRouter({ data, today, lookback, rails, showScreen, showGate });
+  const save = createExport({ data, showScreen, rail: rails[2] });
+  const router = createRouter({ data, today, lookback, save, rails, showScreen, showGate });
   const signOut = router.signOut;
   const signIn = createSignIn({
     data,

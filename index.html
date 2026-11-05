@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/signin.css">
   <link rel="stylesheet" href="css/journal.css">
   <link rel="stylesheet" href="css/chart.css">
+  <link rel="stylesheet" href="css/export.css">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
@@ -166,6 +167,40 @@
           </div>
         </section>
       </div>
+    </section>
+  </main>
+
+  <main class="screen jscreen save" id="screen-save" hidden>
+    <aside class="rail" data-rail="save"></aside>
+    <section class="td-main sv-main">
+      <h1 class="td-date" id="sv-title" tabindex="-1">Save your journal</h1>
+      <p class="sv-intro">Every entry you have written, with each day's mood and note beside it. Only your journal is included.</p>
+      <p class="sv-status" id="sv-status" role="status" aria-live="polite"></p>
+      <p class="td-error" id="sv-error" role="alert" hidden></p>
+      <ul class="sv-list">
+        <li class="sv-row">
+          <div class="sv-text"><h2 class="sv-name">PDF</h2><p class="sv-desc" id="sv-pdf-desc">A clean copy you can read or print. Opens your print window. Choose Save as PDF.</p></div>
+          <button class="sv-btn" id="sv-pdf" type="button" aria-label="Save as PDF" aria-describedby="sv-pdf-desc">Save</button>
+        </li>
+        <li class="sv-row">
+          <div class="sv-text"><h2 class="sv-name">Word</h2><p class="sv-desc" id="sv-docx-desc">A .docx file. Opens in Word, Pages and Google Docs.</p></div>
+          <button class="sv-btn" id="sv-docx" type="button" aria-label="Save as Word" aria-describedby="sv-docx-desc">Save</button>
+        </li>
+        <li class="sv-row">
+          <div class="sv-text"><h2 class="sv-name">Markdown</h2><p class="sv-desc" id="sv-md-desc">Plain text with simple headings, for note apps.</p></div>
+          <button class="sv-btn" id="sv-md" type="button" aria-label="Save as Markdown" aria-describedby="sv-md-desc">Save</button>
+        </li>
+        <li class="sv-row">
+          <div class="sv-text"><h2 class="sv-name">Plain text</h2><p class="sv-desc" id="sv-txt-desc">A .txt file that opens anywhere.</p></div>
+          <button class="sv-btn" id="sv-txt" type="button" aria-label="Save as plain text" aria-describedby="sv-txt-desc">Save</button>
+        </li>
+      </ul>
+      <p class="sv-tip">Want it in Google Docs? Save the Word file, upload it to Google Drive, then open it with Docs.</p>
+      <details class="sv-adv">
+        <summary>Advanced: backup file</summary>
+        <p class="sv-desc" id="sv-json-desc">A file for safekeeping, not for reading. Keep it somewhere safe in case you ever need to restore your journal.</p>
+        <button class="sv-btn sv-btn-quiet" id="sv-json" type="button" aria-label="Save backup file" aria-describedby="sv-json-desc">Save backup file</button>
+      </details>
     </section>
   </main>
 

@@ -43,6 +43,21 @@ export function makeLookbackDom() {
   return doc;
 }
 
+// Ids the Save your journal screen needs.
+export const SAVE_IDS = ['sv-title', 'sv-status', 'sv-error', 'sv-pdf', 'sv-docx', 'sv-md', 'sv-txt', 'sv-json'];
+
+export function makeSaveDom() {
+  const doc = { activeElement: null, byId: {}, body: null };
+  doc.createElement = (t) => new El(doc, t);
+  doc.getElementById = (id) => doc.byId[id] || null;
+  doc.querySelector = () => null;
+  doc.querySelectorAll = () => [];
+  for (const id of SAVE_IDS) { doc.byId[id] = new El(doc, 'x'); doc.byId[id].root = true; }
+  doc.body = new El(doc, 'body'); doc.body.root = true;
+  doc.body.removeChild = (n) => { doc.body.children = doc.body.children.filter((c) => c !== n); n.parent = null; };
+  return doc;
+}
+
 export function makeDom() {
   const doc = { activeElement: null, byId: {}, nav: [] };
   doc.createElement = (t) => new El(doc, t);

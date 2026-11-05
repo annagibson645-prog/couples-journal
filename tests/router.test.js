@@ -27,9 +27,10 @@ async function setup(wrap = (d) => d) {
   let router;
   const rail = createRail({ host, current: 'today', onNavigate: (k) => router.navigate(k), document: doc });
   const today = createToday({ data, document: doc, showScreen() {}, rail, debounceMs: 60000 });
-  const calls = { lookback: [], screens: [], gates: [] };
+  const calls = { lookback: [], screens: [], gates: [], save: [], saveCleared: 0 };
   const lookback = { show: (d) => calls.lookback.push(d), clear() {} };
-  router = createRouter({ data, today, lookback, rails: [rail], showScreen: (n) => calls.screens.push(n), showGate: (...a) => calls.gates.push(a) });
+  const save = { show: (d) => calls.save.push(d), clear: () => { calls.saveCleared += 1; } };
+  router = createRouter({ data, today, lookback, save, rails: [rail], showScreen: (n) => calls.screens.push(n), showGate: (...a) => calls.gates.push(a) });
   const navButton = (key) => host.find((c) => c.tag === 'button' && c.dataset.nav === key)[0];
   return { storage, data, doc, today, calls, navButton, $: (id) => doc.byId[id] };
 }
@@ -45,10 +46,18 @@ test('clicking a rail button while a draft is pending saves the draft through th
   assert.deepEqual(calls.lookback, ['hers']);
 });
 
-test('the Save your journal button opens its stand-in', async () => {
+test('the Save your journal button opens the Save screen for the signed-in door', async () => {
   const { navButton, calls } = await setup();
   navButton('save').click();
-  assert.equal(calls.gates[0][0], 'Save your journal');
+  assert.deepEqual(calls.save, ['hers']);
+  assert.equal(calls.gates.length, 0);
+});
+
+test('signing out clears the Save screen too', async () => {
+  const { navButton, calls } = await setup();
+  navButton('signout').click();
+  await tick();
+  assert.equal(calls.saveCleared, 1);
 });
 
 test('sign-out waits for the draft write before wiping, and no draft remains afterwards', async () => {
