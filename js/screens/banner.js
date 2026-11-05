@@ -15,13 +15,22 @@ export function createBanner({ document: doc = globalThis.document, onReset }) {
     }
   }
 
+  // Marks the banner while the Yes / No question is showing (CSS hides the long text then; no :has() needed).
+  function confirming(on) {
+    const b = $('sample-banner');
+    if (b.classList) b.classList.toggle('is-confirming', on);
+    else b.className = b.className.split(' ').filter((c) => c && c !== 'is-confirming').concat(on ? ['is-confirming'] : []).join(' ');
+  }
+
   function ask() {
     say('');
+    confirming(true);
     $('sample-reset').hidden = true;
     $('sample-confirm').hidden = false;
     $('sample-no').focus(); // the safe answer is the one under the cursor
   }
   function close(message) {
+    confirming(false);
     $('sample-confirm').hidden = true;
     $('sample-reset').hidden = false;
     if (message !== undefined) say(message);

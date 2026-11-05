@@ -1,25 +1,25 @@
 /* Save your journal: the format rows, the Google Docs tip and the Advanced backup.
    Colours come from theme.css (--acc follows Hers / His). Layout shares .rail and .td-main from journal.css. */
 .sv-main { max-width: 860px; }
-.sv-intro { margin: 12px 0 0; max-width: 56ch; font: italic 400 19px/1.55 'Newsreader', serif; color: var(--muted); }
-.sv-status { margin: 14px 0 0; min-height: 1.5em; font: italic 400 17px/1.5 'Newsreader', serif; color: var(--acc); }
+.sv-intro { margin: 12px 0 0; max-width: 56ch; font: italic 400 19px/1.55 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--muted); }
+.sv-status { margin: 14px 0 0; min-height: 1.5em; font: italic 400 17px/1.5 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--acc); }
 .sv-main .td-error { margin-top: 6px; }
 .sv-list { list-style: none; margin: 10px 0 0; padding: 0; border-top: 1px solid var(--line); }
 .sv-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px;
   padding: 16px 0; border-bottom: 1px solid var(--line); }
 .sv-text { flex: 1 1 260px; min-width: 0; }
-.sv-name { margin: 0; font: italic 400 30px/1.1 'Fraunces', serif; }
-.sv-desc { margin: 6px 0 0; font: italic 400 17px/1.45 'Newsreader', serif; color: var(--muted); overflow-wrap: anywhere; }
+.sv-name { margin: 0; font: italic 400 30px/1.1 'Fraunces', Georgia, 'Times New Roman', serif; }
+.sv-desc { margin: 6px 0 0; font: italic 400 17px/1.45 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--muted); overflow-wrap: break-word; overflow-wrap: anywhere; }
 .sv-btn { flex: none; min-height: 46px; min-width: 96px; padding: 10px 28px; border-radius: 999px;
   border: 1px solid var(--acc); background: rgba(var(--accrgb), .12); color: var(--fg);
-  font: italic 400 18px 'Newsreader', serif; cursor: pointer; transition: background .2s, transform .2s; }
-.sv-btn:hover { background: rgba(var(--accrgb), .24); transform: translateY(-2px); }
+  font: italic 400 18px 'Newsreader', Georgia, 'Times New Roman', serif; cursor: pointer; transition: background .2s, transform .2s; }
+@media (hover: hover) { .sv-btn:hover { background: rgba(var(--accrgb), .24); transform: translateY(-2px); } }
 .sv-btn:focus-visible, .sv-adv summary:focus-visible { outline: 3px solid var(--acc); outline-offset: 3px; }
 .sv-btn-quiet { margin-top: 12px; border-color: var(--line); background: transparent; }
-.sv-tip { margin: 16px 0 0; max-width: 60ch; font: italic 400 16px/1.5 'Newsreader', serif; color: var(--muted); }
+.sv-tip { margin: 16px 0 0; max-width: 60ch; font: italic 400 16px/1.5 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--muted); }
 .sv-adv { margin-top: 22px; }
 .sv-adv summary { display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; list-style: none;
-  font: italic 400 17px 'Newsreader', serif; color: var(--muted); text-decoration: underline; text-underline-offset: 4px; }
+  font: italic 400 17px 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--muted); text-decoration: underline; text-underline-offset: 4px; }
 .sv-adv summary::-webkit-details-marker { display: none; }
 .sv-adv summary:hover { color: var(--acc); }
 .sv-adv .sv-desc { max-width: 60ch; }
