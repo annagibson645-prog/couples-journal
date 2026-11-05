@@ -15,6 +15,8 @@ getMoods(): Promise<Record<string,{score:number,note?:string}>>
 addEntry(text: string, now?: Date): Promise<string>
 listEntries(): Promise<Array<{id,day,text,createdAt}>>      // newest first
 deleteEntry(id: string): Promise<void>
+saveDraft(text: string): Promise<void>                       // the unsent writing box; '' removes it
+getDraft(): Promise<string>                                   // '' when there is none
 addNote(text: string): Promise<string>
 listenNotes(cb: (notes: Array<{id,authorDoor,text,createdAt}>) => void): () => void
 deleteNote(id: string): Promise<void>
@@ -40,4 +42,9 @@ deleteNote(id: string): Promise<void>
 - **Ordering:** `listEntries` and the arrays passed to `listenNotes` are newest first.
   `listenNotes` calls back immediately and again after every change; call the returned
   function to stop.
+- **Drafts:** `saveDraft`/`getDraft` hold one unsent writing-box text per person, so a
+  half-written entry survives a reload or leaving the screen. `saveDraft` never rejects
+  because of a storage problem (keep the draft in memory for the visit instead) and
+  `signOut` clears drafts with the rest of the local data. Saving an entry is followed
+  by `saveDraft('')` from the screen. Drafts are plain text, any length.
 - **Ids** are opaque strings; `createdAt` is epoch milliseconds.

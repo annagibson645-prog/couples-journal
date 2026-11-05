@@ -38,6 +38,8 @@ export function createDemoAdapter(given) {
   // In-memory copy of the signed-in person's journal data; cleared on signOut.
   let cache = null; // { moods, entries }
   const noteListeners = new Set();
+  // Drafts that could not be written to storage live here for this visit.
+  const memDrafts = {};
 
   const read = (key) => {
     try { return JSON.parse(storage.getItem(PREFIX + key)); } catch (e) { return null; }
@@ -97,6 +99,7 @@ export function createDemoAdapter(given) {
       session = null;
       cache = null;
       noteListeners.clear();
+      for (const k of Object.keys(memDrafts)) delete memDrafts[k];
       // Best effort: a blocked or failing store must not stop sign-out finishing.
       try {
         const doomed = [];
@@ -133,6 +136,29 @@ export function createDemoAdapter(given) {
 
     async listEntries() {
       return structuredClone(mine().entries).sort((a, b) => b.createdAt - a.createdAt);
+    },
+
+    // The unsent writing box, one per person. Never throws on a storage
+    // problem: the draft is kept in memory for this visit instead.
+    async saveDraft(text) {
+      const s = requireSession();
+      const key = 'draft:' + s.door;
+      const value = typeof text === 'string' ? text : '';
+      try {
+        if (value) storage.setItem(PREFIX + key, JSON.stringify(value));
+        else storage.removeItem(PREFIX + key);
+        delete memDrafts[s.door];
+      } catch (e) {
+        if (value) memDrafts[s.door] = value;
+        else delete memDrafts[s.door];
+      }
+    },
+
+    async getDraft() {
+      const s = requireSession();
+      if (typeof memDrafts[s.door] === 'string') return memDrafts[s.door];
+      const v = read('draft:' + s.door);
+      return typeof v === 'string' ? v : '';
     },
 
     async deleteEntry(id) {

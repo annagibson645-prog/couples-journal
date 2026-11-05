@@ -235,3 +235,54 @@ test('signOut finishes clearing even if removeItem throws', async () => {
   assert.equal(data.currentSession(), null);
   await assert.rejects(data.getMoods());
 });
+
+test('drafts: saved per person under the journal-demo: prefix, restored, and cleared by signOut', async () => {
+  const { data, storage } = fresh();
+  await data.signIn('hers');
+  assert.equal(await data.getDraft(), '');
+  await data.saveDraft('half a thought\nmore');
+  assert.equal(await data.getDraft(), 'half a thought\nmore');
+  assert.ok(demoKeys(storage).some((k) => k.startsWith('journal-demo:draft:')));
+  await data.signOut();
+  assert.equal(demoKeys(storage).length, 0);
+  await data.signIn('his');
+  assert.equal(await data.getDraft(), '');
+  await data.signIn('hers');
+  assert.equal(await data.getDraft(), '');
+});
+
+test('drafts: his and hers do not see each other, empty text removes the draft, signed out rejects', async () => {
+  const { data } = fresh();
+  await assert.rejects(data.getDraft());
+  await assert.rejects(data.saveDraft('x'));
+  await data.signIn('hers');
+  await data.saveDraft('hers draft');
+  await data.signIn('his');
+  assert.equal(await data.getDraft(), '');
+  await data.signIn('hers');
+  assert.equal(await data.getDraft(), 'hers draft');
+  await data.saveDraft('');
+  assert.equal(await data.getDraft(), '');
+});
+
+test('drafts: when storage cannot be written the draft is kept in memory and nothing throws', async () => {
+  const storage = new MemoryStorage();
+  const data = createDemoAdapter(storage);
+  await data.signIn('hers');
+  storage.setItem = () => { throw new Error('full'); };
+  await data.saveDraft('still here');
+  assert.equal(await data.getDraft(), 'still here');
+});
+
+test('a 50,000-character entry and draft round-trip quickly', async () => {
+  const { data } = fresh();
+  await data.signIn('hers');
+  const big = 'word \u{1F319} '.repeat(7000).slice(0, 50000);
+  const t0 = Date.now();
+  await data.saveDraft(big);
+  const id = await data.addEntry(big);
+  const list = await data.listEntries();
+  assert.equal(list.find((e) => e.id === id).text, big);
+  assert.equal(await data.getDraft(), big);
+  assert.ok(Date.now() - t0 < 2000);
+});

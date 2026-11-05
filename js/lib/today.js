@@ -42,3 +42,22 @@ export function entryWhen(entry, todayKey) {
   const d = new Date(entry.createdAt);
   return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}, ${time}`;
 }
+
+// Number of whitespace-separated words.
+export function wordCount(text) {
+  const t = String(text || '').trim();
+  return t ? t.split(/\s+/).length : 0;
+}
+
+// "0 words", "1 word", "1,284 words" (separator is fixed, not locale-dependent).
+export function formatWordCount(n) {
+  return `${String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} ${n === 1 ? 'word' : 'words'}`;
+}
+
+// Fallback guess, used only when the browser cannot measure: would this text
+// run past about 8 lines? (Real layout is measured when it is available.)
+export const COLLAPSE_LINES = 8;
+export function needsCollapse(text) {
+  const t = String(text || '');
+  return t.length > 700 || t.split('\n').length > COLLAPSE_LINES;
+}

@@ -111,10 +111,10 @@
         <span class="kicker">Journal · Private</span>
         <p class="name td-name" id="td-name">Hers</p>
         <nav id="td-nav" class="td-nav" aria-label="Sections">
-          <a href="#" data-nav="today" aria-current="page">Today</a>
-          <a href="#" data-nav="lookback">Look back</a>
-          <a href="#" data-nav="save">Save your journal</a>
-          <a href="#" data-nav="signout">Sign out</a>
+          <button type="button" data-nav="today" aria-current="page">Today</button>
+          <button type="button" data-nav="lookback">Look back</button>
+          <button type="button" data-nav="save">Save your journal</button>
+          <button type="button" data-nav="signout">Sign out</button>
         </nav>
       </div>
     </aside>
@@ -125,14 +125,16 @@
       <div class="td-scale" aria-hidden="true"><span>Heavy</span><span>Bright</span></div>
       <p class="td-word" id="td-word" role="status"></p>
       <input class="td-field" id="td-note" type="text" maxlength="200" autocomplete="off" aria-label="A few words about the day, optional" placeholder="A few words about the day (optional)">
+      <p class="td-hint" id="td-hint" hidden>Choose a moon and your words are saved with it.</p>
       <textarea class="td-field td-area" id="td-text" aria-label="Write an entry" placeholder="Write whenever you're ready."></textarea>
       <div class="td-actions">
         <button class="si-go" id="td-save" type="button">Save entry</button>
+        <span class="td-count" id="td-count">0 words</span>
         <span class="td-status" id="td-status" role="status" hidden></span>
       </div>
       <p class="td-error" id="td-error" role="alert" hidden></p>
       <section class="td-entries" aria-labelledby="td-entries-title">
-        <h2 class="td-entries-title" id="td-entries-title">Your entries</h2>
+        <h2 class="td-entries-title" id="td-entries-title" tabindex="-1">Your entries</h2>
         <p class="td-empty" id="td-empty" hidden>Nothing here yet. Write whenever you're ready.</p>
         <ul class="td-list" id="td-list"></ul>
       </section>
