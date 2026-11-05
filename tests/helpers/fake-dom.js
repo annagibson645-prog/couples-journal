@@ -68,3 +68,16 @@ export function makeDom() {
   for (const id of IDS) { doc.byId[id] = new El(doc, 'x'); doc.byId[id].root = true; }
   return doc;
 }
+
+// Ids the Notes screen needs.
+export const NOTES_IDS = ['nt-title', 'nt-text', 'nt-send', 'nt-count', 'nt-error', 'nt-live', 'nt-feed', 'nt-list', 'nt-empty', 'nt-new'];
+
+export function makeNotesDom() {
+  const doc = { activeElement: null, byId: {} };
+  doc.createElement = (t) => new El(doc, t);
+  doc.getElementById = (id) => doc.byId[id] || null;
+  doc.querySelector = () => null;
+  doc.querySelectorAll = () => [];
+  for (const id of NOTES_IDS) { doc.byId[id] = new El(doc, 'x'); doc.byId[id].root = true; }
+  return doc;
+}

@@ -1,8 +1,8 @@
 // Moves between the journal screens. Takes its dependencies so it can be tested
 // without a browser. Every rail button comes through navigate().
-//   today / lookback / save: screen controllers { show(door), clear() }; today also leave()
+//   today / lookback / save / notes: screen controllers { show(door), clear() }; today and notes also leave()
 //   rails: shared rails to wipe on sign-out; showGate(title, text, who, signOut, toToday)
-export function createRouter({ data, today, lookback, save, rails = [], showScreen, showGate }) {
+export function createRouter({ data, today, lookback, save, notes = { show() {}, leave() {}, clear() {} }, rails = [], showScreen, showGate }) {
   // Sign out: wait for a pending draft to be written, THEN wipe, so the write
   // cannot land after (and undo) the wipe.
   async function signOut() {
@@ -10,6 +10,7 @@ export function createRouter({ data, today, lookback, save, rails = [], showScre
     today.clear();
     lookback.clear();
     save.clear();
+    notes.clear(); // also drops its live listener
     for (const r of rails) r.clear();
     try { await data.signOut(); } finally { showScreen('front'); }
   }
@@ -17,6 +18,8 @@ export function createRouter({ data, today, lookback, save, rails = [], showScre
   function navigate(name) {
     if (name === 'signout') return signOut();
     today.leave(); // saves a draft that was still waiting
+    notes.leave(); // stops listening for notes
+    if (name === 'front') { showScreen('front'); return undefined; } // still signed in
     const session = data.currentSession();
     if (!session) { showScreen('front'); return undefined; }
     if (name === 'today') return today.show(session.door);

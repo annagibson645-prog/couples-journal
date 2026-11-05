@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/journal.css">
   <link rel="stylesheet" href="css/chart.css">
   <link rel="stylesheet" href="css/export.css">
+  <link rel="stylesheet" href="css/notes.css">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
@@ -201,6 +202,27 @@
         <p class="sv-desc" id="sv-json-desc">A file for safekeeping, not for reading. Keep it somewhere safe in case you ever need to restore your journal.</p>
         <button class="sv-btn sv-btn-quiet" id="sv-json" type="button" aria-label="Save backup file" aria-describedby="sv-json-desc">Save backup file</button>
       </details>
+    </section>
+  </main>
+
+  <main class="screen jscreen notes" id="screen-notes" hidden>
+    <aside class="rail" data-rail="notes"></aside>
+    <section class="td-main nt-main">
+      <h1 class="td-date" id="nt-title" tabindex="-1">Leave a note</h1>
+      <div class="nt-compose">
+        <textarea class="td-field nt-area" id="nt-text" maxlength="2000" aria-label="Write a note" aria-describedby="nt-count" placeholder="Write something kind."></textarea>
+        <button class="si-go nt-send" id="nt-send" type="button">Leave note</button>
+      </div>
+      <p class="nt-count" id="nt-count" hidden></p>
+      <p class="td-error" id="nt-error" role="alert" hidden></p>
+      <p class="nt-live" id="nt-live" role="status" aria-live="polite"></p>
+      <div class="nt-feed-wrap">
+        <p class="td-empty" id="nt-empty" hidden>No notes yet. Leave the first one.</p>
+        <div class="nt-feed" id="nt-feed" tabindex="0" role="region" aria-label="Notes between you">
+          <ul class="nt-list" id="nt-list"></ul>
+        </div>
+        <button class="nt-new" id="nt-new" type="button" hidden>New note</button>
+      </div>
     </section>
   </main>
 

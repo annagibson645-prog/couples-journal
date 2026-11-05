@@ -78,3 +78,24 @@ test('sign-out waits for the draft write before wiping, and no draft remains aft
   assert.deepEqual(calls.screens.at(-1), 'front');
   assert.equal($('td-text').value, '');
 });
+
+test('Back to the three doors leaves Notes (unsubscribes) and shows the front page, still signed in', async () => {
+  const { data, calls } = await setup();
+  const left = [];
+  const router = createRouter({ data, today: { show() {}, leave() {}, clear() {} }, lookback: { show() {}, clear() {} }, save: { show() {}, clear() {} },
+    notes: { show() {}, leave: () => left.push('left'), clear() {} }, showScreen: (n) => calls.screens.push(n), showGate() {} });
+  await router.navigate('front');
+  assert.deepEqual(left, ['left']);
+  assert.equal(calls.screens.at(-1), 'front');
+  assert.ok(data.currentSession(), 'still signed in');
+});
+
+test('signing out clears the Notes screen (drops its listener) before the session ends', async () => {
+  const { data, calls } = await setup();
+  const order = [];
+  const router = createRouter({ data: { ...data, signOut: async () => { order.push('signOut'); return data.signOut(); } },
+    today: { show() {}, leave() {}, clear() {} }, lookback: { show() {}, clear() {} }, save: { show() {}, clear() {} },
+    notes: { show() {}, leave() {}, clear: () => order.push('notes') }, showScreen: (n) => calls.screens.push(n), showGate() {} });
+  await router.signOut();
+  assert.deepEqual(order, ['notes', 'signOut']);
+});

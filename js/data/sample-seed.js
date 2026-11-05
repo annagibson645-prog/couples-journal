@@ -51,7 +51,9 @@ export function buildSeed(today = new Date()) {
     hers: { moods: moodsFor(HERS_SCORES, HERS_NOTES, today), entries: entriesFor('hers', HERS_ENTRIES, today) },
     his: { moods: moodsFor(HIS_SCORES, HIS_NOTES, today), entries: entriesFor('his', HIS_ENTRIES, today) },
     notes: NOTES.map(([ago, hour, authorDoor, text], i) => ({
-      id: `note-seed-${i}`, authorDoor, text, createdAt: at(today, ago, hour).getTime(),
+      id: `note-seed-${i}`, authorDoor, text,
+      // Never in the future: a sample note from "today at 6 pm" seeded at noon would sit above the next real note.
+      createdAt: Math.min(at(today, ago, hour).getTime(), today.getTime() - 60000),
     })),
   };
 }

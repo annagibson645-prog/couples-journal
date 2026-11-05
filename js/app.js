@@ -6,6 +6,7 @@ import { createSignIn } from './screens/signin.js';
 import { createToday } from './screens/today.js';
 import { createLookback } from './screens/lookback.js';
 import { createExport } from './screens/export.js';
+import { createNotes } from './screens/notes.js';
 import { createRail } from './screens/rail.js';
 import { createRouter } from './router.js';
 
@@ -62,7 +63,7 @@ function showGate(title, text, who, signOut, toToday) {
   showScreen('gate', who);
 }
 
-function openDoor(door, signIn, today) {
+function openDoor(door, signIn, today, notes) {
   const session = data.currentSession();
   const gate = gateFor(door, session);
   if (gate === 'signin') {
@@ -72,8 +73,7 @@ function openDoor(door, signIn, today) {
   } else if (gate === 'private') {
     showGate('This journal is private.', 'Only its owner can open it. Your own journal and the shared Notes are still yours to open.', session.door, true);
   } else if (door === 'notes') {
-    // Notes replaces this stand-in in a later task.
-    showGate('Notes', 'The shared Notes arrive in the next build step.', session.door, true, true);
+    notes.show(session.door);
   } else {
     today.show(session.door);
   }
@@ -89,23 +89,24 @@ function init() {
   if (banner) banner.hidden = MODE !== 'demo';
   // One rail component, one instance per journal screen; sections share one router.
   const railFor = (current) => createRail({ host: document.querySelector(`[data-rail="${current}"]`), current, onNavigate: (k) => router.navigate(k) });
-  const rails = [railFor('today'), railFor('lookback'), railFor('save')];
+  const rails = [railFor('today'), railFor('lookback'), railFor('save'), railFor('notes')];
   const today = createToday({ data, showScreen, rail: rails[0] });
   const lookback = createLookback({ data, showScreen, rail: rails[1], onNavigate: (k) => router.navigate(k) });
   const save = createExport({ data, showScreen, rail: rails[2] });
-  const router = createRouter({ data, today, lookback, save, rails, showScreen, showGate });
+  const notes = createNotes({ data, showScreen, rail: rails[3] });
+  const router = createRouter({ data, today, lookback, save, notes, rails, showScreen, showGate });
   const signOut = router.signOut;
   const signIn = createSignIn({
     data,
     demo: MODE === 'demo',
     showScreen,
-    onSignedIn: (who, returnTo) => openDoor(returnTo || who, signIn, today),
+    onSignedIn: (who, returnTo) => openDoor(returnTo || who, signIn, today, notes),
     onBack: () => showScreen('front'),
   });
   for (const link of document.querySelectorAll('a[data-door]')) {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      openDoor(link.dataset.door, signIn, today);
+      openDoor(link.dataset.door, signIn, today, notes);
     });
   }
   document.getElementById('gate-back')?.addEventListener('click', (e) => {

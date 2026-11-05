@@ -45,3 +45,22 @@ test('a failed name lookup leaves the plain label', async () => {
   await rail.show('hers', { getMembers: async () => { throw new Error('x'); } });
   assert.equal(host.find((c) => c.className.includes('rail-name'))[0].textContent, 'Hers');
 });
+
+test('the Notes rail has no section buttons: a back link to the front page, then sign out', () => {
+  const { host, clicks } = setup('notes');
+  const buttons = host.find((c) => c.tag === 'button');
+  assert.deepEqual(buttons.map((b) => b.textContent), ['Back to the three doors', 'Sign out']);
+  buttons[0].click(); buttons[1].click();
+  assert.deepEqual(clicks, ['front', 'signout']);
+});
+
+test('the Notes rail shows Shared · Both, the name Notes and its line, whoever is signed in', async () => {
+  const { host, rail, data } = setup('notes', { names: { hers: 'Maya', his: 'Sam' } });
+  await rail.show('notes', data);
+  const text = (cls) => host.find((c) => c.className.split(' ').includes(cls))[0].textContent;
+  assert.equal(text('kicker'), 'Shared · Both');
+  assert.equal(text('rail-name'), 'Notes');
+  assert.equal(text('rail-tag'), 'Little letters for the two of us. Only the two of you can read them.');
+  rail.clear();
+  assert.equal(text('rail-name'), '');
+});
