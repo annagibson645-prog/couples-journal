@@ -19,5 +19,15 @@ test('has theme switch button', () => {
 
 test('has sample-mode banner element', () => {
   assert.match(html, /id="sample-banner"/);
-  assert.match(html, /Sample mode: entries stay on this device only and aren't private or backed up\./);
+  assert.match(html, /Sample mode — entries stay on this device only and aren't private or backed up</);
+});
+
+test('banner and theme switch sit before the front screen, outside it', () => {
+  const b = html.indexOf('id="sample-banner"'), t = html.indexOf('id="theme-toggle"'), m = html.indexOf('id="screen-front"');
+  assert.ok(b > 0 && t > 0 && b < m && t < m);
+});
+
+test('door links are labelled by their name heading', () => {
+  assert.equal((html.match(/aria-labelledby="name-(hers|notes|his)"/g) || []).length, 3);
+  assert.match(html, /family=Newsreader:ital,wght@0,400;1,400/);
 });

@@ -1,6 +1,7 @@
 import { MODE } from './config.js';
 import { tickPath, dotPath } from './lib/sigil.js';
 
+// Duplicated in the inline pre-paint script in index.html; keep in sync.
 const THEME_KEY = 'journal-theme';
 const SCREENS = ['front', 'signin', 'today', 'lookback', 'save', 'notes'];
 
