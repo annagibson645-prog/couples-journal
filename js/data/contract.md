@@ -17,9 +17,9 @@ listEntries(): Promise<Array<{id,day,text,createdAt}>>      // newest first
 deleteEntry(id: string): Promise<void>
 saveDraft(text: string): Promise<void>                       // the unsent writing box; '' removes it
 getDraft(): Promise<string>                                   // '' when there is none
-addNote(text: string): Promise<string>
+addNote(text: string): Promise<string>                      // text is trimmed at the ends
 listenNotes(cb: (notes: Array<{id,authorDoor,text,createdAt}>) => void): () => void
-deleteNote(id: string): Promise<void>
+deleteNote(id: string): Promise<void>                      // rejects for a note the signed-in person did not write
 ```
 
 ## Rules both adapters follow

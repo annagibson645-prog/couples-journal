@@ -189,8 +189,12 @@ export function createDemoAdapter(given) {
     },
 
     async deleteNote(id) {
-      requireSession();
-      write('notes', (read('notes') || []).filter((n) => n.id !== id));
+      const s = requireSession();
+      const all = read('notes') || [];
+      const target = all.find((n) => n.id === id);
+      // Defence in depth: the screen only offers Delete on your own notes.
+      if (target && target.authorDoor !== s.door) throw new Error('You can only delete your own notes.');
+      write('notes', all.filter((n) => n.id !== id));
       emitNotes();
     },
   };

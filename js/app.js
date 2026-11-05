@@ -53,13 +53,11 @@ function applyTheme(theme, save) {
   }
 }
 
-// A message screen: the private-journal notice, and a stand-in for the screens
-// later tasks build. `signOut` shows the sign-out button; `toToday` a way back to Today.
-function showGate(title, text, who, signOut, toToday) {
+// A message screen: the private-journal notice. `signOut` shows the sign-out button.
+function showGate(title, text, who, signOut) {
   document.getElementById('gate-title').textContent = title;
   document.getElementById('gate-text').textContent = text;
   document.getElementById('gate-signout').hidden = !signOut;
-  document.getElementById('gate-today').hidden = !toToday;
   showScreen('gate', who);
 }
 
@@ -114,11 +112,6 @@ function init() {
     showScreen('front');
   });
   document.getElementById('gate-signout')?.addEventListener('click', signOut);
-  document.getElementById('gate-today')?.addEventListener('click', () => {
-    const s = data.currentSession();
-    if (s) today.show(s.door);
-    else showScreen('front');
-  });
   showScreen('front');
 }
 

@@ -378,3 +378,26 @@ test('works on the real demo adapter: Hers writes, His sees it, only own notes h
   }
   his.leave();
 });
+
+test('Ctrl+Enter pressed twice, or held down, before the add finishes posts the note once', async () => {
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const { screen, $, calls } = setup({ data: { addNote: async (text) => { calls.addNote.push(text); await gate; } } });
+  await screen.show('hers');
+  $('nt-text').value = 'only once';
+  $('nt-text').dispatch('keydown', { key: 'Enter', ctrlKey: true });
+  $('nt-text').dispatch('keydown', { key: 'Enter', ctrlKey: true });
+  $('nt-text').dispatch('keydown', { key: 'Enter', metaKey: true, repeat: true });
+  $('nt-send').click();
+  release(); await tick(); await tick();
+  assert.deepEqual(calls.addNote, ['only once']);
+});
+
+test('a key-repeat Ctrl+Enter alone does not send', async () => {
+  const { screen, $, calls } = setup();
+  await screen.show('hers');
+  $('nt-text').value = 'x';
+  $('nt-text').dispatch('keydown', { key: 'Enter', ctrlKey: true, repeat: true });
+  await tick();
+  assert.equal(calls.addNote.length, 0);
+});

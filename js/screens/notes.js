@@ -123,7 +123,9 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
   }
 
   // --- actions -------------------------------------------------------------
+  let sending = false;      // a note is on its way: ignore a second press
   async function send() {
+    if (sending) return;
     const box = $('nt-text');
     const raw = box.value;
     setError('');
@@ -137,6 +139,7 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
     const tk = token;
     const btn = $('nt-send');
     btn.disabled = true;
+    sending = true;
     try {
       await data.addNote(raw.trim());
       if (tk !== token) return;
@@ -148,6 +151,7 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
       // The words stay in the box so nothing typed is lost.
       if (tk === token) setError(messageOf(err, 'Could not leave your note. Please try again.'));
     }
+    sending = false;
     if (tk === token) {
       btn.disabled = false;
       box.focus();
@@ -181,6 +185,7 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
   // Stop listening and ignore anything still on its way.
   function teardown() {
     token += 1;
+    sending = false;
     const stop = unsubscribe;
     unsubscribe = null;
     if (stop) { try { stop(); } catch (e) { /* already stopped */ } }
@@ -209,7 +214,7 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
   $('nt-send').addEventListener('click', send);
   $('nt-text').addEventListener('input', () => { updateCount(); setError(''); });
   $('nt-text').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if (!e.repeat) send(); }
   });
   $('nt-new').addEventListener('click', scrollToNewest);
   $('nt-feed').addEventListener('scroll', () => { if (atBottom()) $('nt-new').hidden = true; });

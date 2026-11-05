@@ -314,3 +314,17 @@ test('drafts: signOut with a throwing removeItem leaves no readable draft', asyn
   await again.signIn('hers');
   assert.equal(await again.getDraft(), '');
 });
+
+test('a person cannot delete the other person\'s note through the adapter; they can delete their own', async () => {
+  const a = createDemoAdapter(new MemoryStorage());
+  await a.signIn('hers');
+  const mineId = await a.addNote('from hers');
+  let notes;
+  const stop = a.listenNotes((n) => { notes = n; });
+  const hisNote = notes.find((n) => n.authorDoor === 'his');
+  await assert.rejects(a.deleteNote(hisNote.id), /only delete your own/);
+  assert.ok(notes.some((n) => n.id === hisNote.id));
+  await a.deleteNote(mineId);
+  assert.ok(!notes.some((n) => n.id === mineId));
+  stop();
+});
