@@ -5,20 +5,126 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Our Journal</title>
   <script>/* storage key 'journal-theme' is duplicated in js/app.js (THEME_KEY); keep in sync */try{var t=localStorage.getItem('journal-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
+  <style>
+    /* Critical: paint the right background before css/app.css arrives (no white flash), and style the boot messages. */
+    html{background:#0e0d14;color:#eae6f5;color-scheme:dark}
+    html[data-theme="light"]{background:#f0ead8;color:#2c1f0e;color-scheme:light}
+    body{background:inherit;color:inherit}
+    #boot-error,#boot-loading{box-sizing:border-box;margin:0;padding:14px 16px;font:400 16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Georgia,serif;
+      border-bottom:2px solid #d97706;background:#2a1a05;color:#fff2d6;-webkit-text-size-adjust:100%}
+    html[data-theme="light"] #boot-error,html[data-theme="light"] #boot-loading{background:#fff1cc;color:#3a2300}
+    #boot-error strong{display:block;font-size:18px;margin-bottom:6px}
+    #boot-error .boot-tech{margin:8px 0 0;font:400 12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:#b8b8b8;word-break:break-all;overflow-wrap:break-word}
+    html[data-theme="light"] #boot-error .boot-tech{color:#595959}
+    #boot-error button{margin-top:10px;min-height:44px;padding:8px 22px;border-radius:999px;border:2px solid currentColor;background:transparent;color:inherit;font:inherit;font-weight:600;touch-action:manipulation;cursor:pointer}
+    #boot-loading{padding:8px 16px;font-size:14px;border-bottom-width:1px}
+  </style>
+  <script id="boot-guard">
+  /* Classic script (runs on any browser). If the app has not started and something fails, show a message instead of a blank page. */
+  (function () {
+    var w = window, d = document, timers = [];
+    function formatTech(msg) {
+      var m = String(msg == null || msg === '' ? 'unknown error' : msg).replace(/\s+/g, ' ');
+      var ua = '';
+      try { ua = w.navigator.userAgent || ''; } catch (e) { ua = ''; }
+      return (m.slice(0, 90) + ' | ' + ua).slice(0, 200);
+    }
+    function mount(node) {
+      function put() { d.body.insertBefore(node, d.body.firstChild); }
+      if (d.body) put(); else d.addEventListener('DOMContentLoaded', put);
+    }
+    function remove(id) { var n = d.getElementById(id); if (n && n.parentNode) n.parentNode.removeChild(n); }
+    function show(headline, techMsg, canReload) {
+      if (d.getElementById('boot-error')) return;
+      remove('boot-loading');
+      var box = d.createElement('div');
+      box.id = 'boot-error';
+      box.setAttribute('role', 'alert');
+      var h = d.createElement('strong'); h.textContent = headline; box.appendChild(h);
+      if (canReload) {
+        var b = d.createElement('button'); b.type = 'button'; b.textContent = 'Reload';
+        b.addEventListener('click', function () { w.location.reload(); });
+        box.appendChild(b);
+      }
+      var t = d.createElement('p'); t.className = 'boot-tech'; t.textContent = formatTech(techMsg); box.appendChild(t);
+      mount(box);
+    }
+    function failed(msg) {
+      if (w.__journalStarted) return;
+      show('Something went wrong loading the journal.', msg, true);
+    }
+    function onError(e) {
+      var t = e && e.target;
+      if (t && t !== w && t.tagName) {
+        if (t.tagName === 'SCRIPT') failed('Could not load ' + (t.src || 'a script'));
+        return; /* fonts, images and the like are not fatal */
+      }
+      failed((e && (e.message || (e.error && e.error.message))) || 'unknown error');
+    }
+    w.addEventListener('error', onError, true);
+    w.addEventListener('unhandledrejection', function (e) {
+      var r = e && e.reason;
+      failed((r && r.message) || (r == null ? 'unhandled rejection' : String(r)));
+    });
+    /* Quiet note only if loading is slow; gone as soon as the app starts. A late start also clears an early false alarm. */
+    var tick = w.setInterval(function () {
+      if (w.__journalStarted) { remove('boot-loading'); remove('boot-error'); w.clearInterval(tick); }
+    }, 250);
+    w.setTimeout(function () {
+      if (w.__journalStarted || d.getElementById('boot-error') || d.getElementById('boot-loading')) return;
+      var n = d.createElement('p'); n.id = 'boot-loading'; n.setAttribute('role', 'status'); n.textContent = 'Still loading…';
+      mount(n);
+    }, 1500);
+    w.setTimeout(function () { failed('Timed out: the app did not start within 15 seconds'); }, 15000);
+    w.__journalGuard = { formatTech: formatTech, show: show, onError: onError };
+  })();
+  </script>
+  <script nomodule>
+  (function () {
+    var g = window.__journalGuard;
+    if (g) g.show('This browser is too old for this page. Try the latest Chrome or Safari.', 'No ES module support', false);
+  })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,400&family=JetBrains+Mono:wght@400&family=Newsreader:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/theme.css">
-  <link rel="stylesheet" href="css/layout.css">
-  <link rel="stylesheet" href="css/sigil.css">
-  <link rel="stylesheet" href="css/signin.css">
-  <link rel="stylesheet" href="css/journal.css">
-  <link rel="stylesheet" href="css/chart.css">
-  <link rel="stylesheet" href="css/export.css">
-  <link rel="stylesheet" href="css/notes.css">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,400&family=JetBrains+Mono:wght@400&family=Newsreader:ital,wght@0,400;1,400&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,400&family=JetBrains+Mono:wght@400&family=Newsreader:ital,wght@0,400;1,400&display=swap"></noscript>
+  <link rel="stylesheet" href="css/app.css">
+  <!-- modulepreload:start -->
+  <link rel="modulepreload" href="js/app.js">
+  <link rel="modulepreload" href="js/config.js">
+  <link rel="modulepreload" href="js/data/demo.js">
+  <link rel="modulepreload" href="js/data/index.js">
+  <link rel="modulepreload" href="js/data/sample-seed.js">
+  <link rel="modulepreload" href="js/doors.js">
+  <link rel="modulepreload" href="js/lib/chart.js">
+  <link rel="modulepreload" href="js/lib/clone.js">
+  <link rel="modulepreload" href="js/lib/days.js">
+  <link rel="modulepreload" href="js/lib/docx.js">
+  <link rel="modulepreload" href="js/lib/escape.js">
+  <link rel="modulepreload" href="js/lib/exportmodel.js">
+  <link rel="modulepreload" href="js/lib/formats.js">
+  <link rel="modulepreload" href="js/lib/lookback.js">
+  <link rel="modulepreload" href="js/lib/moodlogic.js">
+  <link rel="modulepreload" href="js/lib/notes.js">
+  <link rel="modulepreload" href="js/lib/sigil.js">
+  <link rel="modulepreload" href="js/lib/today.js">
+  <link rel="modulepreload" href="js/open-door.js">
+  <link rel="modulepreload" href="js/router.js">
+  <link rel="modulepreload" href="js/screens/banner.js">
+  <link rel="modulepreload" href="js/screens/chart.js">
+  <link rel="modulepreload" href="js/screens/export.js">
+  <link rel="modulepreload" href="js/screens/lookback.js">
+  <link rel="modulepreload" href="js/screens/notes.js">
+  <link rel="modulepreload" href="js/screens/rail.js">
+  <link rel="modulepreload" href="js/screens/shared.js">
+  <link rel="modulepreload" href="js/screens/signin.js">
+  <link rel="modulepreload" href="js/screens/today.js">
+  <!-- modulepreload:end -->
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
+  <noscript><p style="margin:0;padding:14px 16px;font:400 16px/1.45 -apple-system,Roboto,Georgia,serif;background:#fff1cc;color:#3a2300;border-bottom:2px solid #d97706">This journal needs JavaScript. Please turn it on in your browser settings and reload the page.</p></noscript>
   <header class="topbar">
     <div id="sample-banner" class="banner" role="note" hidden>
       <span class="banner-text">Sample mode — entries stay on this device only and aren't private or backed up</span>
@@ -44,7 +150,7 @@
         <div class="glow"></div>
         <div class="sigil">
           <div class="ring-outer ro"></div>
-          <div class="ring-tick rt"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="tick-short" data-n="60" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".38"/><path data-sigil="tick-long" data-n="60" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".65"/></svg></div>
+          <div class="ring-tick rt"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="tick-short" data-n="60" d="M195.47 110.03L187.52 109.20M193.90 119.96L186.08 118.30M191.30 129.67L183.69 127.19M187.70 139.05L180.39 135.79M177.67 156.43L171.19 151.73M171.34 164.24L165.40 158.88M164.24 171.34L158.88 165.40M156.43 177.67L151.73 171.19M139.05 187.70L135.79 180.39M129.67 191.30L127.19 183.69M119.96 193.90L118.30 186.08M110.03 195.47L109.20 187.52M89.97 195.47L90.80 187.52M80.04 193.90L81.70 186.08M70.33 191.30L72.81 183.69M60.95 187.70L64.21 180.39M43.57 177.67L48.27 171.19M35.76 171.34L41.12 165.40M28.66 164.24L34.60 158.88M22.33 156.43L28.81 151.73M12.30 139.05L19.61 135.79M8.70 129.67L16.31 127.19M6.10 119.96L13.92 118.30M4.53 110.03L12.48 109.20M4.53 89.97L12.48 90.80M6.10 80.04L13.92 81.70M8.70 70.33L16.31 72.81M12.30 60.95L19.61 64.21M22.33 43.57L28.81 48.27M28.66 35.76L34.60 41.12M35.76 28.66L41.12 34.60M43.57 22.33L48.27 28.81M60.95 12.30L64.21 19.61M70.33 8.70L72.81 16.31M80.04 6.10L81.70 13.92M89.97 4.53L90.80 12.48M110.03 4.53L109.20 12.48M119.96 6.10L118.30 13.92M129.67 8.70L127.19 16.31M139.05 12.30L135.79 19.61M156.43 22.33L151.73 28.81M164.24 28.66L158.88 34.60M171.34 35.76L165.40 41.12M177.67 43.57L171.19 48.27M187.70 60.95L180.39 64.21M191.30 70.33L183.69 72.81M193.90 80.04L186.08 81.70M195.47 89.97L187.52 90.80" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".38"/><path data-sigil="tick-long" data-n="60" d="M196.00 100.00L182.00 100.00M183.14 148.00L171.01 141.00M148.00 183.14L141.00 171.01M100.00 196.00L100.00 182.00M52.00 183.14L59.00 171.01M16.86 148.00L28.99 141.00M4.00 100.00L18.00 100.00M16.86 52.00L28.99 59.00M52.00 16.86L59.00 28.99M100.00 4.00L100.00 18.00M148.00 16.86L141.00 28.99M183.14 52.00L171.01 59.00" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".65"/></svg></div>
           <div class="ring-dash rd"></div>
           <div class="emblem"><svg viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><g transform="translate(50 50)"><ellipse rx="9" ry="22" cy="-17"/><ellipse rx="9" ry="22" cy="-17" transform="rotate(72)"/><ellipse rx="9" ry="22" cy="-17" transform="rotate(144)"/><ellipse rx="9" ry="22" cy="-17" transform="rotate(216)"/><ellipse rx="9" ry="22" cy="-17" transform="rotate(288)"/><circle r="4.5"/></g></svg></div>
         </div>
@@ -57,9 +163,9 @@
       <a class="col col-notes" href="#" data-door="notes" data-who="notes" aria-labelledby="name-notes">
         <div class="glow"></div>
         <div class="sigil">
-          <div class="ring-dots rp"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="dots" data-n="16" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".62"/></svg></div>
+          <div class="ring-dots rp"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="dots" data-n="16" d="M100.00 8.00l0 0M135.21 15.00l0 0M165.05 34.95l0 0M185.00 64.79l0 0M192.00 100.00l0 0M185.00 135.21l0 0M165.05 165.05l0 0M135.21 185.00l0 0M100.00 192.00l0 0M64.79 185.00l0 0M34.95 165.05l0 0M15.00 135.21l0 0M8.00 100.00l0 0M15.00 64.79l0 0M34.95 34.95l0 0M64.79 15.00l0 0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".62"/></svg></div>
           <div class="ring-outer ro"></div>
-          <div class="ring-tick rt"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="tick-short" data-n="72" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".38"/><path data-sigil="tick-long" data-n="72" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".65"/></svg></div>
+          <div class="ring-tick rt"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="tick-short" data-n="72" d="M195.63 108.37L187.67 107.67M194.54 116.67L186.66 115.28M192.73 124.85L185.00 122.78M190.21 132.83L182.69 130.10M183.14 148.00L176.21 144.00M178.64 155.06L172.09 150.47M173.54 161.71L167.41 156.57M167.88 167.88L162.23 162.23M155.06 178.64L150.47 172.09M148.00 183.14L144.00 176.21M140.57 187.01L137.19 179.76M132.83 190.21L130.10 182.69M116.67 194.54L115.28 186.66M108.37 195.63L107.67 187.67M100.00 196.00L100.00 188.00M91.63 195.63L92.33 187.67M75.15 192.73L77.22 185.00M67.17 190.21L69.90 182.69M59.43 187.01L62.81 179.76M52.00 183.14L56.00 176.21M38.29 173.54L43.43 167.41M32.12 167.88L37.77 162.23M26.46 161.71L32.59 156.57M21.36 155.06L27.91 150.47M12.99 140.57L20.24 137.19M9.79 132.83L17.31 130.10M7.27 124.85L15.00 122.78M5.46 116.67L13.34 115.28M4.00 100.00L12.00 100.00M4.37 91.63L12.33 92.33M5.46 83.33L13.34 84.72M7.27 75.15L15.00 77.22M12.99 59.43L20.24 62.81M16.86 52.00L23.79 56.00M21.36 44.94L27.91 49.53M26.46 38.29L32.59 43.43M38.29 26.46L43.43 32.59M44.94 21.36L49.53 27.91M52.00 16.86L56.00 23.79M59.43 12.99L62.81 20.24M75.15 7.27L77.22 15.00M83.33 5.46L84.72 13.34M91.63 4.37L92.33 12.33M100.00 4.00L100.00 12.00M116.67 5.46L115.28 13.34M124.85 7.27L122.78 15.00M132.83 9.79L130.10 17.31M140.57 12.99L137.19 20.24M155.06 21.36L150.47 27.91M161.71 26.46L156.57 32.59M167.88 32.12L162.23 37.77M173.54 38.29L167.41 43.43M183.14 52.00L176.21 56.00M187.01 59.43L179.76 62.81M190.21 67.17L182.69 69.90M192.73 75.15L185.00 77.22M195.63 91.63L187.67 92.33" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".38"/><path data-sigil="tick-long" data-n="72" d="M196.00 100.00L182.00 100.00M187.01 140.57L174.32 134.65M161.71 173.54L152.71 162.82M124.85 192.73L121.22 179.21M83.33 194.54L85.76 180.75M44.94 178.64L52.97 167.17M16.86 148.00L28.99 141.00M4.37 108.37L18.31 107.15M9.79 67.17L22.95 71.95M32.12 32.12L42.02 42.02M67.17 9.79L71.95 22.95M108.37 4.37L107.15 18.31M148.00 16.86L141.00 28.99M178.64 44.94L167.17 52.97M194.54 83.33L180.75 85.76" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".65"/></svg></div>
           <div class="ring-dash rd"></div>
           <div class="emblem"><svg viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="38" cy="50" r="26"/><circle cx="62" cy="50" r="26"/><path d="M50 36C50 30 41 30 41 37C41 43 50 48 50 48C50 48 59 43 59 37C59 30 50 30 50 36Z" fill="currentColor" stroke="none" opacity=".85"/></svg></div>
         </div>
@@ -73,7 +179,7 @@
         <div class="glow"></div>
         <div class="sigil">
           <div class="ring-outer ro"></div>
-          <div class="ring-tick rt"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="tick-short" data-n="60" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".38"/><path data-sigil="tick-long" data-n="60" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".65"/></svg></div>
+          <div class="ring-tick rt"><svg viewBox="0 0 200 200" aria-hidden="true"><path data-sigil="tick-short" data-n="60" d="M195.47 110.03L187.52 109.20M193.90 119.96L186.08 118.30M191.30 129.67L183.69 127.19M187.70 139.05L180.39 135.79M177.67 156.43L171.19 151.73M171.34 164.24L165.40 158.88M164.24 171.34L158.88 165.40M156.43 177.67L151.73 171.19M139.05 187.70L135.79 180.39M129.67 191.30L127.19 183.69M119.96 193.90L118.30 186.08M110.03 195.47L109.20 187.52M89.97 195.47L90.80 187.52M80.04 193.90L81.70 186.08M70.33 191.30L72.81 183.69M60.95 187.70L64.21 180.39M43.57 177.67L48.27 171.19M35.76 171.34L41.12 165.40M28.66 164.24L34.60 158.88M22.33 156.43L28.81 151.73M12.30 139.05L19.61 135.79M8.70 129.67L16.31 127.19M6.10 119.96L13.92 118.30M4.53 110.03L12.48 109.20M4.53 89.97L12.48 90.80M6.10 80.04L13.92 81.70M8.70 70.33L16.31 72.81M12.30 60.95L19.61 64.21M22.33 43.57L28.81 48.27M28.66 35.76L34.60 41.12M35.76 28.66L41.12 34.60M43.57 22.33L48.27 28.81M60.95 12.30L64.21 19.61M70.33 8.70L72.81 16.31M80.04 6.10L81.70 13.92M89.97 4.53L90.80 12.48M110.03 4.53L109.20 12.48M119.96 6.10L118.30 13.92M129.67 8.70L127.19 16.31M139.05 12.30L135.79 19.61M156.43 22.33L151.73 28.81M164.24 28.66L158.88 34.60M171.34 35.76L165.40 41.12M177.67 43.57L171.19 48.27M187.70 60.95L180.39 64.21M191.30 70.33L183.69 72.81M193.90 80.04L186.08 81.70M195.47 89.97L187.52 90.80" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".38"/><path data-sigil="tick-long" data-n="60" d="M196.00 100.00L182.00 100.00M183.14 148.00L171.01 141.00M148.00 183.14L141.00 171.01M100.00 196.00L100.00 182.00M52.00 183.14L59.00 171.01M16.86 148.00L28.99 141.00M4.00 100.00L18.00 100.00M16.86 52.00L28.99 59.00M52.00 16.86L59.00 28.99M100.00 4.00L100.00 18.00M148.00 16.86L141.00 28.99M183.14 52.00L171.01 59.00" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".65"/></svg></div>
           <div class="ring-dash rd"></div>
           <div class="emblem"><svg viewBox="0 0 100 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M50 8L57 43L92 50L57 57L50 92L43 57L8 50L43 43Z"/><circle cx="50" cy="50" r="14"/><circle cx="50" cy="50" r="3"/></svg></div>
         </div>

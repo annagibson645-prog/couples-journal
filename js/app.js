@@ -109,6 +109,8 @@ function init() {
   });
   document.getElementById('gate-signout')?.addEventListener('click', signOut);
   showScreen('front');
+  // Tells the inline guard in index.html that the app is up (it hides any loading or error message).
+  globalThis.__journalStarted = true;
 }
 
 if (typeof document !== 'undefined') init();
