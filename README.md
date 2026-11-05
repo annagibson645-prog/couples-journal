@@ -9,3 +9,7 @@ The live site is a sample-mode preview with invented data; nothing typed there i
 - `js/config.js` sets `MODE`. `'demo'` keeps sample data in the browser only and shows a banner saying so.
 
 No real journal text is ever committed to this repository.
+
+## Build step
+
+Edit the files in `css/` and `js/` as usual, then run `node scripts/build.mjs`. It rewrites `css/app.css` (the one stylesheet the page loads), the sigil paths and the `modulepreload` list in `index.html`. `npm test` fails if any of them are out of date.
