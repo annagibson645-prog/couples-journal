@@ -134,6 +134,19 @@ All methods act on the signed-in person's own journal only.
 - [ ] **Step 2:** Run (FAIL), implement in `demo.js`, run (PASS).
 - [ ] **Step 3:** Build the feed UI to match the canvas `Notes` board: composer at the top ("Leave note"), the viewer's own notes on the right with a Delete link, the other person's on the left, author colours pink (Hers) and blue (His), rendered via `textContent`. Commit `feat: shared notes (sample mode)`.
 
+### Task 7b: No-login sample mode (added at the user's request)
+
+The user wants to show the published sample site to the friend with no login. In sample mode (`MODE === 'demo'`) there is nothing to sign in to.
+
+**Files:** Modify `js/app.js`, `js/router.js`, `js/screens/signin.js`, `js/screens/rail.js`, `js/screens/notes.js`, `index.html`, `css/layout.css`, `css/notes.css`; Test `tests/sample-mode.test.js` (plus extensions to existing screen tests)
+
+**Interfaces:** Consumes `data.signIn('hers'|'his')`, `data.signOut()`, `MODE` from `js/config.js`, `gateFor`/`canOpen` from `js/doors.js`. Produces: in demo mode, clicking the Hers or His column signs that person in automatically and opens Today; clicking Notes signs in as Hers and opens Notes with a viewer switch; in firebase mode everything behaves as before (sign-in screen, gating).
+
+- [ ] **Step 1:** Write failing tests: in demo mode a front-page column opens its journal with no sign-in screen (Hers, His); Notes opens signed in as Hers; the Notes viewer switch signs in as the other person without wiping sample data (moods, entries and notes still there, His's own notes now on the right with Delete); in firebase mode the sign-in screen and the "This journal is private." gate still appear; the rail's "Sign out" in demo mode becomes "Back to the three doors" and does not wipe data.
+- [ ] **Step 2:** Implement the demo-mode path through the router: auto sign-in for the chosen column, no sign-in screen shown. Keep `signin.js` and its tests for firebase mode. The sample-mode banner stays; add a small "Reset sample data" button in the banner that asks for confirmation ("Reset the sample data on this device?" Yes / No), clears every `journal-demo:` key, reseeds, and returns to the front page.
+- [ ] **Step 3:** Add the Notes viewer switch to the Notes screen (demo mode only): a button "Seen from Hers. Switch to His" / "Seen from His. Switch to Hers" that signs in as the other person with `data.signIn` (never `signOut`), re-subscribes the feed without double subscriptions, and keeps focus on the button.
+- [ ] **Step 4:** Check in a browser at 375px and 1280px in both themes: every column opens straight in; Today, Look back, Save, Notes all work as both people; switching the Notes viewer shows each side's notes; Reset sample data works; no console errors. Commit `feat: no-login sample mode`.
+
 ### Task 8: Publish the front end to GitHub Pages
 
 **Files:** Modify `README.md`
