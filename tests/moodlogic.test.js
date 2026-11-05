@@ -1,3 +1,6 @@
+// Before any Date is created: local-day logic must hold away from UTC.
+process.env.TZ = 'America/Los_Angeles';
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { isValidScore, moodSeries, buildCalendar } from '../js/lib/moodlogic.js';
@@ -10,7 +13,7 @@ test('isValidScore accepts integers 1-10 only', () => {
 });
 
 test('moodSeries gives one point per day, null for gaps, inclusive', () => {
-  const moods = [{ day: '2026-11-01', score: 4 }, { day: '2026-11-03', score: 8 }];
+  const moods = { '2026-11-01': { score: 4, note: 'slow start' }, '2026-11-03': { score: 8 } };
   assert.deepEqual(moodSeries(moods, '2026-11-01', '2026-11-04'), [
     { day: '2026-11-01', score: 4 },
     { day: '2026-11-02', score: null },
@@ -19,20 +22,27 @@ test('moodSeries gives one point per day, null for gaps, inclusive', () => {
   ]);
 });
 
-test('moodSeries crosses month and year ends and accepts a day-keyed map', () => {
-  const series = moodSeries({ '2026-12-31': { score: 6 }, '2027-01-01': 7 }, '2026-12-30', '2027-01-02');
+test('moodSeries crosses month and year ends', () => {
+  const series = moodSeries({ '2026-12-31': { score: 6 }, '2027-01-01': { score: 7, note: 'new year' } }, '2026-12-30', '2027-01-02');
   assert.deepEqual(series.map((p) => p.day), ['2026-12-30', '2026-12-31', '2027-01-01', '2027-01-02']);
   assert.deepEqual(series.map((p) => p.score), [null, 6, 7, null]);
 });
 
-test('moodSeries treats invalid scores as gaps and from > to as empty', () => {
-  assert.deepEqual(moodSeries([{ day: '2026-11-01', score: 99 }], '2026-11-01', '2026-11-01'),
+test('moodSeries gives one point per calendar day across the US DST change (2026-11-01)', () => {
+  const series = moodSeries({ '2026-11-01': { score: 5 } }, '2026-10-30', '2026-11-03');
+  assert.deepEqual(series.map((p) => p.day),
+    ['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02', '2026-11-03']);
+  assert.deepEqual(series.map((p) => p.score), [null, null, 5, null, null]);
+});
+
+test('moodSeries treats invalid scores as intended gaps and from > to as empty', () => {
+  assert.deepEqual(moodSeries({ '2026-11-01': { score: 99 } }, '2026-11-01', '2026-11-01'),
     [{ day: '2026-11-01', score: null }]);
-  assert.deepEqual(moodSeries([], '2026-11-05', '2026-11-01'), []);
+  assert.deepEqual(moodSeries({}, '2026-11-05', '2026-11-01'), []);
 });
 
 test('buildCalendar Nov 2026: Monday-first, 30 real days, padded', () => {
-  const weeks = buildCalendar(2026, 11, [{ day: '2026-11-05', score: 7 }]);
+  const weeks = buildCalendar(2026, 11, { '2026-11-05': { score: 7, note: 'good day' } });
   assert.ok(weeks.every((w) => w.length === 7));
   // 1 Nov 2026 is a Sunday: six leading blanks in week one.
   assert.deepEqual(weeks[0].slice(0, 6).map((c) => c.day), Array(6).fill(null));
@@ -45,11 +55,11 @@ test('buildCalendar Nov 2026: Monday-first, 30 real days, padded', () => {
 });
 
 test('buildCalendar Feb 2028 has 29 days; Feb 2027 has 28', () => {
-  assert.equal(buildCalendar(2028, 2, []).flat().filter((c) => c.day).length, 29);
-  assert.equal(buildCalendar(2027, 2, []).flat().filter((c) => c.day).length, 28);
+  assert.equal(buildCalendar(2028, 2, {}).flat().filter((c) => c.day).length, 29);
+  assert.equal(buildCalendar(2027, 2, {}).flat().filter((c) => c.day).length, 28);
 });
 
 test('buildCalendar month starting Monday has no leading padding', () => {
   // 1 Feb 2027 is a Monday.
-  assert.equal(buildCalendar(2027, 2, [])[0][0].day, '2027-02-01');
+  assert.equal(buildCalendar(2027, 2, {})[0][0].day, '2027-02-01');
 });

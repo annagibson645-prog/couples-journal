@@ -5,15 +5,13 @@ export function isValidScore(n) {
   return Number.isInteger(n) && n >= 1 && n <= 10;
 }
 
-// Accepts [{day, score}] or a map { 'YYYY-MM-DD': score | {score} }.
-// Returns Map<day, score> holding valid scores only.
+// moods is Record<'YYYY-MM-DD', {score, note?}>, the shape the data adapters return.
+// Returns Map<day, score>. A score that is not an integer 1-10 is deliberately
+// dropped, so that day shows as a gap (null) rather than a bogus point.
 function scoreMap(moods) {
   const out = new Map();
-  const entries = Array.isArray(moods)
-    ? moods.map((m) => [m && m.day, m && m.score])
-    : Object.entries(moods || {}).map(([day, v]) => [day, v !== null && typeof v === 'object' ? v.score : v]);
-  for (const [day, score] of entries) {
-    if (typeof day === 'string' && isValidScore(score)) out.set(day, score);
+  for (const [day, mood] of Object.entries(moods || {})) {
+    if (mood && isValidScore(mood.score)) out.set(day, mood.score);
   }
   return out;
 }
