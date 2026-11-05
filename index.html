@@ -135,8 +135,9 @@
       <h1 class="td-date" id="lb-title" tabindex="-1">Looking back</h1>
       <p class="lb-sub" id="lb-sub">Your mood over the last 30 days.</p>
       <p class="td-error" id="lb-error" role="alert" hidden></p>
+      <button class="si-go lb-retry" id="lb-retry" type="button" hidden>Try again</button>
       <div class="lb-empty" id="lb-empty" hidden>
-        <p>No moods yet. Choose a moon on Today and it will appear here.</p>
+        <p id="lb-empty-text">No moods yet. Choose a moon on Today and it will appear here.</p>
         <button class="si-go" id="lb-empty-today" type="button">Go to Today</button>
       </div>
       <div class="ch" id="lb-chart"></div>
@@ -154,10 +155,11 @@
           <p class="lb-day-prompt" id="lb-day-prompt"></p>
           <div id="lb-day-body" hidden>
             <p class="lb-day-name" id="lb-day-name"></p>
-            <div class="lb-day-mood">
+            <div class="lb-day-mood" id="lb-day-mood">
               <svg viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="17" fill="none" stroke="currentColor" stroke-opacity=".55"/><path id="lb-day-path" fill="currentColor"/></svg>
               <p class="lb-day-word" id="lb-day-word"></p>
             </div>
+            <p class="lb-day-nomood" id="lb-day-nomood" hidden>No mood chosen</p>
             <p class="lb-day-note" id="lb-day-note"></p>
             <p class="td-empty" id="lb-day-empty">No entry written that day.</p>
             <ul class="td-list" id="lb-day-entries"></ul>

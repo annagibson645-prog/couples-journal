@@ -82,14 +82,15 @@ export function createToday({ data, showScreen, rail = { show() {} }, document: 
   }
   // Storage problems are the adapter's to absorb; anything else is ignored
   // too, because a draft must never nag.
+  // Returns a promise that always resolves, so a caller can wait for the write.
   function writeDraft(text) {
-    try { Promise.resolve(data.saveDraft(text)).catch(() => {}); } catch (e) { /* ignore */ }
+    try { return Promise.resolve(data.saveDraft(text)).catch(() => {}); } catch (e) { return Promise.resolve(); }
   }
   // Save now if a save is waiting (leaving the screen, closing the page).
   function flushDraft() {
-    if (draftTimer === null) return;
+    if (draftTimer === null) return Promise.resolve();
     cancelDraft();
-    writeDraft($('td-text').value);
+    return writeDraft($('td-text').value);
   }
   function scheduleDraft() {
     cancelDraft();

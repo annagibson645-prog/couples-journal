@@ -6,6 +6,7 @@ import { createSignIn } from './screens/signin.js';
 import { createToday } from './screens/today.js';
 import { createLookback } from './screens/lookback.js';
 import { createRail } from './screens/rail.js';
+import { createRouter } from './router.js';
 
 // Duplicated in the inline pre-paint script in index.html; keep in sync.
 const THEME_KEY = 'journal-theme';
@@ -86,28 +87,12 @@ function init() {
   const banner = document.getElementById('sample-banner');
   if (banner) banner.hidden = MODE !== 'demo';
   // One rail component, one instance per journal screen; sections share one router.
-  const railFor = (current) => createRail({ host: document.querySelector(`[data-rail="${current}"]`), current, onNavigate: navigate });
+  const railFor = (current) => createRail({ host: document.querySelector(`[data-rail="${current}"]`), current, onNavigate: (k) => router.navigate(k) });
   const rails = [railFor('today'), railFor('lookback')];
   const today = createToday({ data, showScreen, rail: rails[0] });
-  const lookback = createLookback({ data, showScreen, rail: rails[1], onNavigate: navigate });
-  function navigate(name) {
-    today.leave(); // saves a draft that was still waiting
-    if (name === 'signout') { signOut(); return; }
-    const session = data.currentSession();
-    if (!session) { showScreen('front'); return; }
-    if (name === 'today') today.show(session.door);
-    else if (name === 'lookback') lookback.show(session.door);
-    else if (name === 'save') {
-      // Save your journal replaces this stand-in in a later task.
-      showGate('Save your journal', 'This part of the journal arrives in the next build step.', session.door, true, true);
-    }
-  }
-  async function signOut() {
-    today.clear();
-    lookback.clear();
-    for (const r of rails) r.clear();
-    try { await data.signOut(); } finally { showScreen('front'); }
-  }
+  const lookback = createLookback({ data, showScreen, rail: rails[1], onNavigate: (k) => router.navigate(k) });
+  const router = createRouter({ data, today, lookback, rails, showScreen, showGate });
+  const signOut = router.signOut;
   const signIn = createSignIn({
     data,
     demo: MODE === 'demo',

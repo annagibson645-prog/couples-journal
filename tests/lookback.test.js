@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { shiftMonth, monthTitle, tintAlpha, isStrongTint, cellLabel, entriesForDay, formatDayLong, monthOfDay } from '../js/lib/lookback.js';
+import { shiftMonth, monthTitle, tintAlpha, isStrongTint, cellLabel, entriesForDay, formatDayLong, monthOfDay, entryCounts } from '../js/lib/lookback.js';
 import { buildCalendar } from '../js/lib/moodlogic.js';
 
 test('previous and next month cross year boundaries', () => {
@@ -57,4 +57,18 @@ test('entries are filtered by day', () => {
   assert.deepEqual(entriesForDay(es, '2026-11-05').map((e) => e.id), ['a', 'c']);
   assert.deepEqual(entriesForDay(es, '2026-11-01'), []);
   assert.deepEqual(entriesForDay(undefined, '2026-11-01'), []);
+});
+
+test('cell labels count entries, and entry-only days say no mood', () => {
+  assert.equal(cellLabel('2026-11-05', null, false, 2), '5 November, no mood, 2 entries');
+  assert.equal(cellLabel('2026-11-05', null, false, 1), '5 November, no mood, 1 entry');
+  assert.equal(cellLabel('2026-11-05', 7, true, 1), '5 November, mostly bright, 1 entry, today');
+  assert.equal(cellLabel('2026-11-05', null, false, 0), '5 November, no mood');
+});
+
+test('entries are counted per day', () => {
+  const m = entryCounts([{ day: 'a' }, { day: 'b' }, { day: 'a' }]);
+  assert.equal(m.get('a'), 2);
+  assert.equal(m.get('b'), 1);
+  assert.equal(m.get('c'), undefined);
 });

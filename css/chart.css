@@ -18,7 +18,7 @@
 .ch-area { fill: rgba(var(--accrgb), .14); stroke: none; }
 .ch-line { fill: none; stroke: var(--acc); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
 .ch-dots { fill: none; stroke: var(--acc); stroke-width: 6; stroke-linecap: round; }
-.ch-hit { fill: transparent; cursor: pointer; }
+.ch-svg { cursor: pointer; }
 
 /* below the chart: calendar and the chosen day */
 .lb-below { display: flex; gap: 34px; margin-top: 22px; align-items: flex-start; }
@@ -27,8 +27,8 @@
 .lb-month { margin: 0; font: italic 400 26px 'Fraunces', serif; text-align: center; flex: 1; }
 .lb-step { flex: none; width: 44px; height: 44px; padding: 0; border-radius: 50%; border: 1px solid var(--line);
   background: transparent; color: var(--fg); font: 400 24px/1 'Newsreader', serif; cursor: pointer; }
-.lb-step:hover:not(:disabled) { background: rgba(127,127,127,.16); }
-.lb-step:disabled { opacity: .35; cursor: default; }
+.lb-step:hover:not(:disabled):not([aria-disabled="true"]) { background: rgba(127,127,127,.16); }
+.lb-step:disabled, .lb-step[aria-disabled="true"] { opacity: .35; cursor: default; }
 .lb-step:focus-visible, .cl:focus-visible { outline: 3px solid var(--acc); outline-offset: 3px; }
 .lb-week, .lb-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .lb-week { margin-top: 10px; font: italic 400 14px 'Newsreader', serif; color: var(--muted); text-align: center; }
@@ -44,6 +44,7 @@
 .cl:hover:not(:disabled) { transform: scale(1.08); }
 .cl-strong { color: var(--on-acc); }
 .cl-none { border: 1px dashed var(--line); color: var(--muted); cursor: default; }
+.cl-only { border: 1px solid var(--muted); color: var(--fg); }
 .cl-today { outline: 2px solid var(--acc); outline-offset: 2px; }
 .cl-sel { border-color: var(--fg); }
 
@@ -53,6 +54,8 @@
 .lb-day-mood { display: flex; align-items: center; gap: 16px; margin-top: 10px; color: var(--acc); }
 .lb-day-mood svg { width: 56px; height: 56px; flex: none; }
 .lb-day-word { margin: 0; font: italic 400 32px/1.1 'Fraunces', serif; color: var(--acc); }
+.lb-day-nomood { margin: 10px 0 0; font: italic 400 24px/1.1 'Fraunces', serif; color: var(--muted); }
+.lb-retry { margin: 10px 0 0; }
 .lb-day-note { margin: 16px 0 0; font: italic 400 19px/1.55 'Newsreader', serif; overflow-wrap: anywhere; }
 .lb-day .td-entry:last-child { border-bottom: 0; }
 

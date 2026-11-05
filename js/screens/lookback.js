@@ -5,12 +5,14 @@ import { moonPath } from '../lib/sigil.js';
 import { dayKey } from '../lib/days.js';
 import { moodSeries, buildCalendar, isValidScore } from '../lib/moodlogic.js';
 import { moodWord, moonFraction, entryWhen } from '../lib/today.js';
-import { shiftMonth, monthTitle, monthOfDay, tintAlpha, isStrongTint, cellLabel, entriesForDay, formatDayLong } from '../lib/lookback.js';
+import { shiftMonth, monthTitle, monthOfDay, tintAlpha, isStrongTint, cellLabel, entriesForDay, entryCounts, formatDayLong } from '../lib/lookback.js';
 import { renderChart } from './chart.js';
 import { makeEl, messageOf, collapsibleText } from './shared.js';
 
 const SPAN = 30; // days in the chart, ending today
 const CHOOSE = 'Choose a day to see its mood and what you wrote.';
+const NO_MOODS = 'No moods yet. Choose a moon on Today and it will appear here.';
+const NO_MOODS_BUT_ENTRIES = 'No moods yet. Choose a moon on Today and it will appear here. Days with entries are still open in the calendar.';
 const COULD_NOT_OPEN = "We couldn't open your journal just now. Please try again.";
 
 // deps: { data, showScreen, rail?, onNavigate(name), document?, now? }
@@ -24,6 +26,9 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
   let month = 0;
   let selected = null; // 'YYYY-MM-DD' or null
   let loaded = false;
+  let failed = false;
+  let lastWho = 'hers';
+  let counts = new Map(); // day -> number of entries
   let cellByDay = new Map();
   let rows = [];       // collapsible entry texts on screen
   const expanded = new Set();
@@ -36,7 +41,10 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
     const e = $('lb-error');
     e.textContent = msg || '';
     e.hidden = !msg;
+    $('lb-retry').hidden = !msg;
   }
+  // A day can be opened if it has a mood or at least one entry.
+  const hasContent = (day) => !!(validMoods()[day]) || (counts.get(day) || 0) > 0;
 
   // --- chart ---------------------------------------------------------------
   function drawChart() {
@@ -44,7 +52,7 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
     const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - (SPAN - 1));
     const host = $('lb-chart');
     const w = host.clientWidth;
-    renderChart(host, moodSeries(validMoods(), dayKey(start), dayKey(end)), { width: w > 0 ? w : 700, document: doc });
+    renderChart(host, moodSeries(validMoods(), dayKey(start), dayKey(end)), { width: w > 0 ? w : 700, unavailable: failed, document: doc });
   }
 
   // --- calendar ------------------------------------------------------------
@@ -59,25 +67,28 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
         if (!cell.day) { grid.appendChild(el('span', 'cl-blank')); continue; }
         const isToday = cell.day === t;
         const has = cell.score !== null;
+        const n = counts.get(cell.day) || 0;
+        const open = has || n > 0;
         const b = el('button', '', String(Number(cell.day.slice(8))));
         b.type = 'button';
         b.dataset.day = cell.day;
-        b.setAttribute('aria-label', cellLabel(cell.day, cell.score, isToday));
-        if (has) {
-          b.style.background = `rgba(var(--accrgb), ${tintAlpha(cell.score)})`;
+        b.setAttribute('aria-label', cellLabel(cell.day, cell.score, isToday, n));
+        if (open) {
+          if (has) b.style.background = `rgba(var(--accrgb), ${tintAlpha(cell.score)})`;
           b.setAttribute('aria-pressed', 'false');
           b.addEventListener('click', () => select(cell.day));
         } else {
           b.disabled = true;
         }
-        b.className = ['cl', has ? 'cl-has' : 'cl-none', has && isStrongTint(cell.score) ? 'cl-strong' : '', isToday ? 'cl-today' : ''].filter(Boolean).join(' ');
+        b.className = ['cl', has ? 'cl-has' : (open ? 'cl-only' : 'cl-none'), has && isStrongTint(cell.score) ? 'cl-strong' : '', isToday ? 'cl-today' : ''].filter(Boolean).join(' ');
         cellByDay.set(cell.day, b);
         grid.appendChild(b);
       }
     }
     $('lb-month').textContent = monthTitle(year, month);
     const c = current();
-    $('lb-next').disabled = year * 12 + month >= c.year * 12 + c.month;
+    // aria-disabled, not disabled: a disabled button would drop keyboard focus.
+    $('lb-next').setAttribute('aria-disabled', String(year * 12 + month >= c.year * 12 + c.month));
   }
 
   function markSelected() {
@@ -91,8 +102,10 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
 
   // --- the chosen day ------------------------------------------------------
   function drawDay() {
-    const mood = selected && moods[selected];
-    const ok = !!mood && isValidScore(mood.score);
+    const raw = selected && moods[selected];
+    const mood = raw && isValidScore(raw.score) ? raw : null;
+    const mine = selected ? entriesForDay(entries, selected) : [];
+    const ok = !!selected && (!!mood || mine.length > 0);
     $('lb-day-prompt').hidden = ok;
     $('lb-day-body').hidden = !ok;
     $('lb-day-prompt').textContent = CHOOSE;
@@ -100,12 +113,18 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
     $('lb-day-entries').replaceChildren();
     if (!ok) return;
     $('lb-day-name').textContent = formatDayLong(selected);
-    $('lb-day-path').setAttribute('d', moonPath(moonFraction(mood.score)));
-    $('lb-day-word').textContent = `${moodWord(mood.score)}.`;
-    const note = typeof mood.note === 'string' ? mood.note.trim() : '';
+    // A day with entries but no mood says so, with no moon.
+    $('lb-day-mood').hidden = !mood;
+    $('lb-day-nomood').hidden = !!mood;
+    if (mood) {
+      $('lb-day-path').setAttribute('d', moonPath(moonFraction(mood.score)));
+      $('lb-day-word').textContent = `${moodWord(mood.score)}.`;
+    } else {
+      $('lb-day-word').textContent = '';
+    }
+    const note = mood && typeof mood.note === 'string' ? mood.note.trim() : '';
     $('lb-day-note').textContent = note;
     $('lb-day-note').hidden = !note;
-    const mine = entriesForDay(entries, selected);
     $('lb-day-empty').hidden = mine.length > 0;
     const t = today();
     for (const entry of mine) {
@@ -135,11 +154,11 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
 
   // Today's mood if there is one, else the most recent day with a mood this month.
   function initialSelection() {
-    const mine = validMoods();
     const t = today();
-    if (mine[t]) return t;
+    if (hasContent(t)) return t;
     const prefix = `${year}-${String(month).padStart(2, '0')}-`;
-    const days = Object.keys(mine).filter((d) => d.startsWith(prefix)).sort();
+    const all = new Set([...Object.keys(validMoods()), ...counts.keys()]);
+    const days = [...all].filter((d) => d.startsWith(prefix)).sort();
     return days.length ? days[days.length - 1] : null;
   }
 
@@ -149,7 +168,9 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
     selected = loaded ? initialSelection() : null;
     markSelected();
     drawDay();
-    $('lb-empty').hidden = !loaded || Object.keys(validMoods()).length > 0;
+    const noMoods = Object.keys(validMoods()).length === 0;
+    $('lb-empty').hidden = !loaded || !noMoods;
+    $('lb-empty-text').textContent = counts.size ? NO_MOODS_BUT_ENTRIES : NO_MOODS;
   }
 
   function resetView() {
@@ -158,6 +179,8 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
     entries = [];
     selected = null;
     loaded = false;
+    failed = false;
+    counts = new Map();
     rows = [];
     cellByDay = new Map();
     expanded.clear();
@@ -176,12 +199,14 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
 
   // --- wiring --------------------------------------------------------------
   $('lb-prev').addEventListener('click', () => { const m = shiftMonth(year, month, -1); goToMonth(m.year, m.month); });
-  $('lb-next').addEventListener('click', () => { const m = shiftMonth(year, month, 1); goToMonth(m.year, m.month); });
+  $('lb-next').addEventListener('click', () => {
+    if ($('lb-next').getAttribute('aria-disabled') === 'true') return; // nothing after this month
+    const m = shiftMonth(year, month, 1); goToMonth(m.year, m.month); });
+  $('lb-retry').addEventListener('click', () => api.show(lastWho));
   $('lb-empty-today').addEventListener('click', () => onNavigate('today'));
   $('lb-chart').addEventListener('daypick', (e) => {
     const day = e && e.detail && e.detail.day;
-    const mood = day && moods[day];
-    if (!mood || !isValidScore(mood.score)) return;
+    if (!day || !hasContent(day)) return;
     const m = monthOfDay(day);
     if (m.year !== year || m.month !== month) goToMonth(m.year, m.month);
     select(day);
@@ -194,9 +219,10 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
   });
   doc.fonts?.ready?.then(() => { for (const r of rows) r.remeasure(); });
 
-  return {
+  const api = {
     async show(door) {
       const who = door === 'his' ? 'his' : 'hers';
+      lastWho = who;
       resetView();
       const t = token;
       const c = current();
@@ -210,6 +236,7 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
         if (t !== token) return;
         moods = m || {};
         entries = e || [];
+        counts = entryCounts(entries);
         loaded = true;
         render();
       } catch (err) {
@@ -217,6 +244,7 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
         moods = {};
         entries = [];
         loaded = false;
+        failed = true;
         setError(messageOf(err, COULD_NOT_OPEN));
         render();
       }
@@ -224,4 +252,5 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
     // Wipe everything shown (sign-out on a shared device).
     clear: resetView,
   };
+  return api;
 }

@@ -63,13 +63,28 @@ export function chartPaths(series, geo = chartGeometry()) {
 }
 
 // Screen-reader sentence for the whole chart.
-export function chartAriaLabel(series) {
+export function chartAriaLabel(series, { unavailable = false } = {}) {
+  if (unavailable) return 'Mood chart unavailable';
   const base = 'Mood line chart for the last 30 days';
   let last = null;
   for (const p of series) if (p.score !== null && p.score !== undefined) last = p;
   if (!last) return `${base}; no moods recorded yet`;
   const isLatest = last === series[series.length - 1];
   return `${base}; most recent mood ${last.score} of 10${isLatest ? '' : `, on ${formatDayShort(last.day)}`}`;
+}
+
+// The point closest to x (sideways distance only), or null when none is within
+// maxDist. `points` is chartPoints output (null for gap days). One tap handler
+// on the whole chart uses this, so crowded dots on a phone cannot open the wrong day.
+export function nearestPoint(points, x, maxDist) {
+  let best = null;
+  let bestDist = Infinity;
+  for (const p of points) {
+    if (!p) continue;
+    const d = Math.abs(p.x - x);
+    if (d < bestDist) { best = p; bestDist = d; }
+  }
+  return best && bestDist <= maxDist ? best : null;
 }
 
 // "5 November: 7 of 10, mostly bright" for each day that has a mood, oldest first.

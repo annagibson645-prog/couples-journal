@@ -51,10 +51,19 @@ export function isStrongTint(score) {
 }
 
 // Screen-reader label for a calendar cell: "5 November, mostly bright".
-export function cellLabel(key, score, isToday = false) {
+// A day with entries says how many: "5 November, no mood, 2 entries".
+export function cellLabel(key, score, isToday = false, entryCount = 0) {
   const base = formatDayShort(key);
   const mood = score ? moodWord(score).toLowerCase() : 'no mood';
-  return `${base}, ${mood}${isToday ? ', today' : ''}`;
+  const count = entryCount > 0 ? `, ${entryCount} ${entryCount === 1 ? 'entry' : 'entries'}` : '';
+  return `${base}, ${mood}${count}${isToday ? ', today' : ''}`;
+}
+
+// Map<day, number of entries>.
+export function entryCounts(entries) {
+  const out = new Map();
+  for (const e of entries || []) out.set(e.day, (out.get(e.day) || 0) + 1);
+  return out;
 }
 
 export function entriesForDay(entries, key) {

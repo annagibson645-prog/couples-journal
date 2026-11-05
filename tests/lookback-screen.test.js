@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createLookback } from '../js/screens/lookback.js';
 import { makeLookbackDom } from './helpers/fake-dom.js';
 
+const tick = () => new Promise((r) => setTimeout(r, 0));
 const NOW = () => new Date(2026, 10, 5, 10, 0);
 const at = (d, h = 9) => new Date(2026, 10, d, h, 0).getTime();
 const entry = (id, d, text) => ({ id, day: `2026-11-${String(d).padStart(2, '0')}`, text, createdAt: at(d) });
@@ -109,10 +110,10 @@ test('entries and notes go in as text, never markup, and long entries collapse',
 test('previous and next move one month; next stops at the current month', async () => {
   const { lookback, $ } = setup({ moods: MOODS });
   await lookback.show('hers');
-  assert.equal($('lb-next').disabled, true);
+  assert.equal($('lb-next').getAttribute('aria-disabled'), 'true');
   $('lb-prev').click();
   assert.equal($('lb-month').textContent, 'October 2026');
-  assert.equal($('lb-next').disabled, false);
+  assert.equal($('lb-next').getAttribute('aria-disabled'), 'false');
   assert.equal($('lb-day-prompt').hidden, false); // nothing chosen in October yet
   assert.equal($('lb-day-body').hidden, true);
   $('lb-next').click();
@@ -215,4 +216,108 @@ test('a slow reply from an earlier show is ignored', async () => {
   await a;
   assert.equal($('lb-day-note').textContent, 'Steady day.');
   assert.ok(dayCell(2));
+});
+
+// --- fix round 1 -----------------------------------------------------------
+const TWO = [entry('x', 4, 'only words, no moon'), entry('y', 4, 'a second one')];
+
+test('an entry-only day is open, labelled with its entry count, and shows "No mood chosen" with its entries', async () => {
+  const { lookback, $, dayCell } = setup({ moods: MOODS, entries: TWO });
+  await lookback.show('hers');
+  const cell = dayCell(4);
+  assert.equal(cell.disabled, false);
+  assert.equal(cell.getAttribute('aria-label'), '4 November, no mood, 2 entries');
+  assert.ok(cell.className.includes('cl-only'));
+  cell.click();
+  assert.equal($('lb-day-name').textContent, 'Wednesday, 4 November 2026');
+  assert.equal($('lb-day-nomood').hidden, false);
+  assert.equal($('lb-day-mood').hidden, true);
+  assert.equal($('lb-day-note').hidden, true);
+  assert.equal($('lb-day-entries').children.length, 2);
+  assert.equal($('lb-day-empty').hidden, true);
+  assert.equal(cell.getAttribute('aria-pressed'), 'true');
+});
+
+test('a mood-only day still shows its moon and no "No mood chosen"; a day with neither stays disabled', async () => {
+  const { lookback, $, dayCell } = setup({ moods: MOODS, entries: TWO });
+  await lookback.show('hers');
+  dayCell(3).click();
+  assert.equal($('lb-day-mood').hidden, false);
+  assert.equal($('lb-day-nomood').hidden, true);
+  assert.equal($('lb-day-word').textContent, 'A bit low.');
+  assert.equal(dayCell(6).disabled, true);
+  assert.equal(dayCell(6).getAttribute('aria-label'), '6 November, no mood');
+});
+
+test('a day with one entry says "1 entry"', async () => {
+  const { lookback, dayCell } = setup({ moods: MOODS, entries: [entry('x', 3, 'hi')] });
+  await lookback.show('hers');
+  assert.equal(dayCell(3).getAttribute('aria-label'), '3 November, a bit low, 1 entry');
+});
+
+test('a chart pick of an entry-only day also opens it', async () => {
+  const { lookback, $ } = setup({ moods: MOODS, entries: TWO });
+  await lookback.show('hers');
+  $('lb-chart').dispatchEvent({ type: 'daypick', detail: { day: '2026-11-04' } });
+  assert.equal($('lb-day-nomood').hidden, false);
+  assert.equal($('lb-day-entries').children.length, 2);
+});
+
+test('entries but no moods: the prompt says what is true and the entry days are still open', async () => {
+  const { lookback, $, dayCell } = setup({ moods: {}, entries: TWO });
+  await lookback.show('hers');
+  assert.equal($('lb-empty').hidden, false);
+  assert.match($('lb-empty-text').textContent, /No moods yet/);
+  assert.match($('lb-empty-text').textContent, /entries are still open/);
+  assert.equal(dayCell(4).disabled, false);
+  dayCell(4).click();
+  assert.equal($('lb-day-entries').children.length, 2);
+});
+
+test('with neither moods nor entries the plain prompt shows', async () => {
+  const { lookback, $ } = setup();
+  await lookback.show('hers');
+  assert.equal($('lb-empty-text').textContent, 'No moods yet. Choose a moon on Today and it will appear here.');
+});
+
+test("today with only entries is chosen first", async () => {
+  const { lookback, $ } = setup({ moods: {}, entries: [entry('t', 5, 'today words')] });
+  await lookback.show('hers');
+  assert.equal($('lb-day-name').textContent, 'Thursday, 5 November 2026');
+  assert.equal($('lb-day-nomood').hidden, false);
+});
+
+test('Next month keeps keyboard focus when it reaches the current month (aria-disabled, not disabled)', async () => {
+  const { lookback, $, doc } = setup({ moods: MOODS });
+  await lookback.show('hers');
+  $('lb-prev').click();
+  $('lb-next').focus();
+  $('lb-next').click();
+  assert.equal($('lb-month').textContent, 'November 2026');
+  assert.equal($('lb-next').getAttribute('aria-disabled'), 'true');
+  assert.equal($('lb-next').disabled, false);
+  assert.equal(doc.activeElement, $('lb-next'));
+  $('lb-next').click(); // a no-op now
+  assert.equal($('lb-month').textContent, 'November 2026');
+});
+
+test('on a load error the chart is labelled unavailable, not "no moods", and Try again reloads', async () => {
+  let fail = true;
+  const { lookback, $, dayCell } = setup({ moods: MOODS, data: { getMoods: async () => { if (fail) throw new Error('Could not read your journal'); return MOODS; } } });
+  await lookback.show('hers');
+  assert.equal($('lb-chart').children[0].getAttribute('aria-label'), 'Mood chart unavailable');
+  assert.equal($('lb-retry').hidden, false);
+  fail = false;
+  $('lb-retry').click();
+  await tick(); await tick();
+  assert.equal($('lb-error').hidden, true);
+  assert.equal($('lb-retry').hidden, true);
+  assert.equal($('lb-chart').children[0].getAttribute('aria-label'), 'Mood line chart for the last 30 days; most recent mood 7 of 10');
+  assert.ok(dayCell(5));
+});
+
+test('the retry button is hidden when there is no error', async () => {
+  const { lookback, $ } = setup({ moods: MOODS });
+  await lookback.show('hers');
+  assert.equal($('lb-retry').hidden, true);
 });

@@ -29,8 +29,8 @@ const IDS = ['td-date', 'td-moons', 'td-word', 'td-note', 'td-text', 'td-save', 
   'td-error', 'td-hint', 'td-count', 'td-list', 'td-empty', 'td-entries-title'];
 
 // Ids the Look back screen needs.
-export const LOOKBACK_IDS = ['lb-title', 'lb-sub', 'lb-error', 'lb-empty', 'lb-empty-today', 'lb-chart', 'lb-month', 'lb-prev', 'lb-next',
-  'lb-grid', 'lb-day-prompt', 'lb-day-body', 'lb-day-name', 'lb-day-path', 'lb-day-word', 'lb-day-note', 'lb-day-empty', 'lb-day-entries'];
+export const LOOKBACK_IDS = ['lb-title', 'lb-sub', 'lb-error', 'lb-retry', 'lb-empty', 'lb-empty-text', 'lb-empty-today', 'lb-chart', 'lb-month', 'lb-prev', 'lb-next',
+  'lb-grid', 'lb-day-prompt', 'lb-day-body', 'lb-day-name', 'lb-day-path', 'lb-day-mood', 'lb-day-nomood', 'lb-day-word', 'lb-day-note', 'lb-day-empty', 'lb-day-entries'];
 
 export function makeLookbackDom() {
   const doc = { activeElement: null, byId: {} };
