@@ -22,8 +22,10 @@
 .si-go { min-height: 50px; padding: 12px 34px; border: 0; border-radius: 999px; background: var(--acc);
   color: var(--bg); font: italic 400 20px 'Newsreader', serif; cursor: pointer; transition: transform .2s; }
 .si-go:hover { transform: translateY(-2px); }
-.si-link { font: italic 400 17px 'Newsreader', serif; color: var(--muted); text-decoration: underline;
-  text-underline-offset: 4px; padding: 6px 0; }
+.si-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0; margin: 0; border: 0;
+  background: none; cursor: pointer; font: italic 400 17px 'Newsreader', serif; color: var(--muted);
+  text-decoration: underline; text-underline-offset: 4px; }
+#si-name:focus { outline: none; }
 .si-link:hover { color: var(--acc); }
 .si-form > .si-link { align-self: flex-start; margin-top: 18px; }
 .si-form > .si-back { margin-top: 30px; }

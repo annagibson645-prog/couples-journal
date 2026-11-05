@@ -156,3 +156,82 @@ test('getMembers returns names and doors', async () => {
   assert.deepEqual(m.names, { hers: 'Hers', his: 'His' });
   assert.ok(m.doors.hers && m.doors.his && m.doors.hers !== m.doors.his);
 });
+
+test('signing in as His directly after Hers (no signOut) shows none of Hers\' data', async () => {
+  const { data } = fresh();
+  await data.signIn('hers');
+  await data.saveMood('2031-08-01', 9, 'hers only');
+  await data.addEntry('hers private entry', new Date(2031, 7, 1, 10, 0));
+  await data.signIn('his');
+  assert.equal((await data.getMoods())['2031-08-01'], undefined);
+  assert.ok(!(await data.listEntries()).some((e) => e.text === 'hers private entry'));
+});
+
+test('very long and awkward entries round-trip unchanged', async () => {
+  const { data } = fresh();
+  await data.signIn('hers');
+  const long = 'a'.repeat(10500) + ' end';
+  const awkward = '😀 *bold* _it_ # h `code` [l](u) "q" \'s\' <script>alert(1)</script> & é\nline2';
+  const a = await data.addEntry(long, new Date(2031, 8, 1, 9, 0));
+  const b = await data.addEntry(awkward, new Date(2031, 8, 1, 10, 0));
+  const list = await data.listEntries();
+  assert.equal(list.find((e) => e.id === a).text, long);
+  assert.equal(list.find((e) => e.id === b).text, awkward);
+});
+
+// Storage failure handling.
+class FlakyStorage extends MemoryStorage {
+  constructor() { super(); this.failSet = false; this.failRemove = false; }
+  setItem(k, v) { if (this.failSet) throw new Error('QuotaExceededError'); super.setItem(k, v); }
+  removeItem(k) { if (this.failRemove) throw new Error('blocked'); super.removeItem(k); }
+}
+
+test('a throwing localStorage getter falls back to in-memory storage', async () => {
+  const had = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('SecurityError'); } });
+  try {
+    const data = createDemoAdapter();
+    await data.signIn('hers');
+    const id = await data.addEntry('works without storage', new Date(2031, 9, 1, 9, 0));
+    assert.ok((await data.listEntries()).some((e) => e.id === id));
+    await data.signOut();
+  } finally {
+    if (had) Object.defineProperty(globalThis, 'localStorage', had); else delete globalThis.localStorage;
+  }
+});
+
+test('signIn still works when seeding cannot be written', async () => {
+  const storage = new FlakyStorage();
+  storage.failSet = true;
+  const data = createDemoAdapter(storage);
+  await data.signIn('his');
+  assert.ok((await data.listEntries()).length >= 3);
+});
+
+test('a failed write gives a friendly error and leaves memory and storage unchanged', async () => {
+  const storage = new FlakyStorage();
+  const data = createDemoAdapter(storage);
+  await data.signIn('hers');
+  const moodsBefore = await data.getMoods();
+  const entriesBefore = await data.listEntries();
+  let notesBefore;
+  data.listenNotes((n) => { notesBefore = n; })();
+  storage.failSet = true;
+  await assert.rejects(data.saveMood('2031-10-01', 5), /device/);
+  await assert.rejects(data.addEntry('will not save', new Date(2031, 9, 1, 9, 0)), /device/);
+  await assert.rejects(data.addNote('will not save'), /device/);
+  await assert.rejects(data.deleteEntry(entriesBefore[0].id), /device/);
+  assert.deepEqual(await data.getMoods(), moodsBefore);
+  assert.deepEqual(await data.listEntries(), entriesBefore);
+  assert.deepEqual(notesNow(data), notesBefore);
+});
+
+test('signOut finishes clearing even if removeItem throws', async () => {
+  const storage = new FlakyStorage();
+  const data = createDemoAdapter(storage);
+  await data.signIn('hers');
+  storage.failRemove = true;
+  await assert.doesNotReject(data.signOut());
+  assert.equal(data.currentSession(), null);
+  await assert.rejects(data.getMoods());
+});

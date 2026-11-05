@@ -76,7 +76,7 @@
       <div class="glow"></div>
       <div class="si-sigil" id="si-sigil"></div>
       <span class="kicker">Journal · Private</span>
-      <h1 class="name" id="si-name">Hers</h1>
+      <h1 class="name" id="si-name" tabindex="-1">Hers</h1>
       <p class="tag">Your private journal. Only you hold the key.</p>
     </aside>
     <section class="si-form">
@@ -93,12 +93,12 @@
         <p id="si-error" class="si-error" role="alert" hidden></p>
         <div class="si-actions">
           <button id="si-submit" class="si-go" type="submit">Open Hers</button>
-          <a id="si-forgot" class="si-link" href="#">Forgot your password?</a>
+          <button id="si-forgot" class="si-link" type="button">Forgot your password?</button>
         </div>
         <p id="si-forgot-note" class="si-help" role="status" hidden></p>
       </form>
-      <a id="si-switch" class="si-link" href="#" hidden>Sign in as His instead</a>
-      <a id="si-back" class="si-link si-back" href="#">Back to the three doors</a>
+      <button id="si-switch" class="si-link" type="button" hidden>Sign in as His instead</button>
+      <button id="si-back" class="si-link si-back" type="button">Back to the three doors</button>
     </section>
   </main>
 
@@ -108,7 +108,7 @@
       <p class="tag" id="gate-text"></p>
       <div class="gate-actions">
         <button id="gate-signout" class="si-go" type="button" hidden>Sign out</button>
-        <a id="gate-back" class="si-link" href="#">Back to the three doors</a>
+        <button id="gate-back" class="si-link" type="button">Back to the three doors</button>
       </div>
     </div>
   </main>

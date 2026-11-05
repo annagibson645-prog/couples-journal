@@ -97,8 +97,7 @@ function init() {
     showScreen('front');
   });
   document.getElementById('gate-signout')?.addEventListener('click', async () => {
-    await data.signOut();
-    showScreen('front');
+    try { await data.signOut(); } finally { showScreen('front'); }
   });
   showScreen('front');
 }

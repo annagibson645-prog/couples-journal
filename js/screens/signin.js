@@ -38,6 +38,8 @@ export function createSignIn({ data, demo, showScreen, onSignedIn, onBack }) {
     $('si-switch').hidden = !(returnTo === 'notes' && who === 'hers');
     setError('');
     showScreen('signin', who);
+    // Inputs are disabled in sample mode, so land on the heading.
+    $('si-name').focus();
   }
 
   $('si-form').addEventListener('submit', async (e) => {
