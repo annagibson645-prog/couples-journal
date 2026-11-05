@@ -70,7 +70,7 @@ export function makeDom() {
 }
 
 // Ids the Notes screen needs.
-export const NOTES_IDS = ['nt-title', 'nt-text', 'nt-send', 'nt-count', 'nt-error', 'nt-live', 'nt-feed', 'nt-list', 'nt-empty', 'nt-new'];
+export const NOTES_IDS = ['nt-title', 'nt-text', 'nt-send', 'nt-count', 'nt-error', 'nt-live', 'nt-feed', 'nt-list', 'nt-empty', 'nt-new', 'nt-switch'];
 
 export function makeNotesDom() {
   const doc = { activeElement: null, byId: {} };
@@ -79,5 +79,16 @@ export function makeNotesDom() {
   doc.querySelector = () => null;
   doc.querySelectorAll = () => [];
   for (const id of NOTES_IDS) { doc.byId[id] = new El(doc, 'x'); doc.byId[id].root = true; }
+  return doc;
+}
+
+// Ids the sample-mode banner needs.
+export const BANNER_IDS = ['sample-banner', 'sample-reset', 'sample-confirm', 'sample-yes', 'sample-no', 'sample-status'];
+
+export function makeBannerDom() {
+  const doc = { activeElement: null, byId: {} };
+  doc.createElement = (t) => new El(doc, t);
+  doc.getElementById = (id) => doc.byId[id] || null;
+  for (const id of BANNER_IDS) { doc.byId[id] = new El(doc, 'x'); doc.byId[id].root = true; }
   return doc;
 }

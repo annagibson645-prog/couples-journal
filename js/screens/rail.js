@@ -16,7 +16,8 @@ const NOTES_LINE = 'Little letters for the two of us. Only the two of you can re
 // onNavigate(key) is called for any other section, including 'signout'.
 // current 'notes' is the shared Notes variant: violet sigil, a line about Notes,
 // no section buttons, and instead 'front' (back to the three doors) and 'signout'.
-export function createRail({ host, current, onNavigate, document: doc = globalThis.document }) {
+// demo (sample mode): there is no one to sign out, so "Sign out" becomes "Back to the three doors".
+export function createRail({ host, current, onNavigate, demo = false, document: doc = globalThis.document }) {
   const el = makeEl(doc);
   const inner = el('div', 'rail-in');
   const sigil = el('div', 'rail-sigil');
@@ -27,9 +28,10 @@ export function createRail({ host, current, onNavigate, document: doc = globalTh
   inner.append(el('div', 'glow'), sigil, el('span', 'kicker', isNotes ? 'Shared · Both' : 'Journal · Private'), name);
   if (isNotes) inner.appendChild(el('p', 'rail-tag', NOTES_LINE));
   inner.appendChild(nav);
+  const BACK = 'Back to the three doors';
   const links = isNotes
-    ? [{ key: 'front', label: 'Back to the three doors' }, { key: 'signout', label: 'Sign out' }]
-    : SECTIONS;
+    ? [{ key: 'front', label: BACK }, ...(demo ? [] : [{ key: 'signout', label: 'Sign out' }])]
+    : SECTIONS.map((s) => (demo && s.key === 'signout' ? { ...s, label: BACK } : s));
   for (const s of links) {
     const b = el('button', '', s.label);
     b.type = 'button';

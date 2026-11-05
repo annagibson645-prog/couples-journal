@@ -99,3 +99,40 @@ test('signing out clears the Notes screen (drops its listener) before the sessio
   await router.signOut();
   assert.deepEqual(order, ['notes', 'signOut']);
 });
+
+test('sample mode: the rail Sign out key just returns to the front page and wipes nothing', async () => {
+  const { data, calls } = await setup();
+  await data.saveMood('2026-11-05', 6);
+  await data.addEntry('kept entry');
+  const left = [];
+  const cleared = [];
+  const router = createRouter({ data, demo: true, today: { show() {}, leave: () => left.push('today'), clear: () => cleared.push('today') },
+    lookback: { show() {}, clear: () => cleared.push('lookback') }, save: { show() {}, clear: () => cleared.push('save') },
+    notes: { show() {}, leave: () => left.push('notes'), clear: () => cleared.push('notes') }, showScreen: (n) => calls.screens.push(n), showGate() {} });
+  await router.navigate('signout');
+  assert.deepEqual(left, ['today', 'notes']);
+  assert.deepEqual(cleared, []);
+  assert.equal(calls.screens.at(-1), 'front');
+  assert.ok(data.currentSession(), 'still signed in');
+  assert.equal((await data.listEntries()).length > 0, true);
+  assert.equal((await data.getMoods())['2026-11-05'].score, 6);
+});
+
+test('sample mode: a pending Today draft is flushed on the way back to the doors', async () => {
+  const { data, today, $ } = await setup();
+  const router = createRouter({ data, demo: true, today, lookback: { show() {}, clear() {} }, save: { show() {}, clear() {} }, showScreen() {}, showGate() {} });
+  await today.show('hers');
+  $('td-text').value = 'unfinished';
+  $('td-text').dispatch('input');
+  await router.navigate('signout');
+  assert.equal(await data.getDraft(), 'unfinished');
+});
+
+test('sample mode: router.signOut is still the wipe (used by Reset sample data)', async () => {
+  const { data, storage, calls } = await setup();
+  const router = createRouter({ data, demo: true, today: { show() {}, leave() {}, clear() {} }, lookback: { show() {}, clear() {} }, save: { show() {}, clear() {} }, showScreen: (n) => calls.screens.push(n), showGate() {} });
+  await router.signOut();
+  assert.equal(data.currentSession(), null);
+  assert.equal(storage.length, 0);
+  assert.equal(calls.screens.at(-1), 'front');
+});

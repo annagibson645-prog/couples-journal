@@ -11,10 +11,12 @@ const EMPTY_TEXT = 'Write a few words first, then leave the note.';
 const TOO_LONG = 'A note can be up to 2,000 characters. Please make this one a little shorter.';
 const NEAR_BOTTOM = 40; // px from the end that still counts as "at the newest"
 
-// deps: { data, showScreen, rail?, document?, now? }
+// deps: { data, showScreen, rail?, document?, now?, demo?, beforeSwitch? }
+// `demo` (sample mode) adds the viewer switch: one button that signs in as the other person.
+// `beforeSwitch` is awaited first so the app can save and wipe what the person leaving typed.
 // `rail` is the shared left rail (js/screens/rail.js). Navigation lives in the rail
 // and the router; the router calls leave() on the way out and clear() on sign-out.
-export function createNotes({ data, showScreen, rail = { show() {} }, document: doc = globalThis.document, now = () => new Date() }) {
+export function createNotes({ data, showScreen, rail = { show() {} }, document: doc = globalThis.document, now = () => new Date(), demo = false, beforeSwitch = async () => {} }) {
   const el = makeEl(doc);
   const $ = (id) => doc.getElementById(id);
   let viewer = 'hers';
@@ -219,31 +221,76 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
   $('nt-new').addEventListener('click', scrollToNewest);
   $('nt-feed').addEventListener('scroll', () => { if (atBottom()) $('nt-new').hidden = true; });
 
+  // --- viewer switch (sample mode) -----------------------------------------
+  function updateSwitch() {
+    const sw = $('nt-switch');
+    if (!sw) return;
+    sw.hidden = !demo;
+    const other = viewer === 'his' ? 'hers' : 'his';
+    sw.textContent = `Seen from ${LABEL[viewer]}. Switch to ${LABEL[other]}`;
+  }
+
+  // Listen for notes as the current viewer, then look up the names.
+  async function subscribe(tk) {
+    try {
+      const stop = data.listenNotes((notes) => { if (tk === token) onNotes(notes); });
+      if (tk === token) unsubscribe = stop; else stop();
+    } catch (err) {
+      setError(messageOf(err, 'Could not open the notes.'));
+      return;
+    }
+    try {
+      const members = await data.getMembers();
+      if (tk !== token) return;
+      for (const k of ['hers', 'his']) {
+        const n = members && members.names && members.names[k];
+        if (typeof n === 'string' && n) names[k] = n;
+      }
+      render();
+    } catch (e) { /* the plain labels stand */ }
+  }
+
+  let switching = false;
+  async function switchViewer() {
+    if (switching) return;
+    switching = true;
+    const tk = token;
+    const next = viewer === 'his' ? 'hers' : 'his';
+    try {
+      setError('');
+      await beforeSwitch(); // the person leaving: draft saved, typed text wiped
+      if (tk !== token) return;
+      await data.signIn(next); // never signOut: that would wipe the sample data
+      if (tk !== token) return;
+      teardown(); // one listener at a time
+      resetView(); // typed text never crosses over
+      viewer = next;
+      updateSwitch();
+      const mine = token;
+      const done = subscribe(mine);
+      announce(`Now seen from ${LABEL[next]}`);
+      $('nt-switch').focus();
+      await done;
+    } catch (err) {
+      if (tk === token) setError(messageOf(err, 'Could not switch. Please try again.'));
+    } finally {
+      switching = false;
+    }
+  }
+  if ($('nt-switch')) { $('nt-switch').type = 'button'; $('nt-switch').addEventListener('click', switchViewer); }
+
   return {
     async show(door) {
       viewer = door === 'his' ? 'his' : 'hers';
       teardown();
       resetView();
+      switching = false;
       const tk = token;
       rail.show('notes', data);
+      updateSwitch();
       showScreen('notes', 'notes');
       $('nt-title').focus();
-      try {
-        const stop = data.listenNotes((notes) => { if (tk === token) onNotes(notes); });
-        if (tk === token) unsubscribe = stop; else stop();
-      } catch (err) {
-        setError(messageOf(err, 'Could not open the notes.'));
-        return;
-      }
-      try {
-        const members = await data.getMembers();
-        if (tk !== token) return;
-        for (const k of ['hers', 'his']) {
-          const n = members && members.names && members.names[k];
-          if (typeof n === 'string' && n) names[k] = n;
-        }
-        render();
-      } catch (e) { /* the plain labels stand */ }
+      await subscribe(tk);
     },
     // The app calls this before moving to another screen.
     leave: teardown,

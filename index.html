@@ -20,7 +20,18 @@
 </head>
 <body>
   <header class="topbar">
-    <p id="sample-banner" class="banner" role="note" hidden>Sample mode — entries stay on this device only and aren't private or backed up</p>
+    <div id="sample-banner" class="banner" role="note" hidden>
+      <span class="banner-text">Sample mode — entries stay on this device only and aren't private or backed up</span>
+      <span class="banner-actions">
+        <button id="sample-reset" class="banner-btn" type="button">Reset sample data</button>
+        <span id="sample-confirm" class="banner-confirm" role="group" aria-label="Reset the sample data" hidden>
+          <span class="banner-q">Reset the sample data on this device?</span>
+          <button id="sample-yes" class="banner-btn" type="button">Yes</button>
+          <button id="sample-no" class="banner-btn" type="button">No</button>
+        </span>
+        <span id="sample-status" class="banner-status" role="status"></span>
+      </span>
+    </div>
     <button id="theme-toggle" type="button">Light mode</button>
   </header>
   <main class="screen" id="screen-front">
@@ -209,6 +220,7 @@
     <aside class="rail" data-rail="notes"></aside>
     <section class="td-main nt-main">
       <h1 class="td-date" id="nt-title" tabindex="-1">Leave a note</h1>
+      <button class="td-link nt-switch" id="nt-switch" type="button" hidden></button>
       <div class="nt-compose">
         <textarea class="td-field nt-area" id="nt-text" maxlength="2000" aria-label="Write a note" aria-describedby="nt-count" placeholder="Write something kind."></textarea>
         <button class="si-go nt-send" id="nt-send" type="button">Leave note</button>

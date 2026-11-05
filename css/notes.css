@@ -6,6 +6,8 @@
 .nt-main { --note-bg: .09; --note-line: .5; }
 :root[data-theme="light"] .nt-main { --note-bg: .14; --note-line: .6; }
 
+.nt-switch { margin-top: 6px; min-height: 44px; padding: 8px 0; text-align: left; font-size: 16px; }
+.nt-switch[hidden] { display: none; }
 .nt-compose { margin-top: 20px; display: flex; gap: 14px; align-items: flex-end; }
 .nt-area { margin-top: 0; flex: 1; min-width: 0; height: 84px; min-height: 84px; max-height: 40vh; font-size: 19px; line-height: 1.5; padding: 14px 16px; resize: vertical; }
 .nt-send { flex: none; min-height: 50px; padding: 12px 28px; }

@@ -32,7 +32,19 @@ a { color: inherit; text-decoration: none; }
 
 .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 6px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
-.banner { margin: 0; flex: 1; font: 400 11px/1.4 'JetBrains Mono', monospace; color: var(--muted); }
+.banner { margin: 0; flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px;
+  font: 400 11px/1.4 'JetBrains Mono', monospace; color: var(--muted); }
+.banner[hidden] { display: none; }
+.banner-text { flex: 1 1 24ch; min-width: 0; }
+.banner-actions { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; }
+.banner-btn { min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent;
+  color: var(--fg); font: italic 400 15px 'Newsreader', serif; cursor: pointer; }
+.banner-btn:hover { background: rgba(127,127,127,.16); }
+.banner-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; }
+.banner-confirm[hidden] { display: none; }
+.banner-q { font: italic 400 15px 'Newsreader', serif; color: var(--fg); }
+.banner-status { font: italic 400 15px 'Newsreader', serif; color: var(--muted); }
+.banner-status:empty { display: none; }
 
 @media (max-width: 760px) {
   .stage { flex-direction: column; min-height: 0; }
@@ -40,5 +52,13 @@ a { color: inherit; text-decoration: none; }
   .col-notes { --size: min(280px, 74vw); }
   .col:last-child { border-bottom: 0; }
   .name, .col-notes .name { font-size: 38px; }
+  /* Phone: the banner text takes the top line; Reset and the theme switch share the line below. */
+  .topbar { flex-wrap: wrap; gap: 0 10px; padding: 2px 16px; }
+  .banner { display: contents; }
+  .banner[hidden] { display: none; }
+  .banner-text { order: 0; flex: 1 1 100%; padding-top: 2px; }
+  .banner-actions { order: 1; flex: 1 1 0; min-width: 0; }
+  #theme-toggle { order: 2; }
+  .banner:has(.banner-confirm:not([hidden])) .banner-text { display: none; }
   #theme-toggle { padding: 6px 14px; }
 }

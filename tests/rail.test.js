@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { createRail, SECTIONS } from '../js/screens/rail.js';
 import { makeLookbackDom } from './helpers/fake-dom.js';
 
-function setup(current, members) {
+function setup(current, members, demo = false) {
   const doc = makeLookbackDom();
   const host = doc.createElement('aside');
   const clicks = [];
-  const rail = createRail({ host, current, onNavigate: (k) => clicks.push(k), document: doc });
+  const rail = createRail({ host, current, demo, onNavigate: (k) => clicks.push(k), document: doc });
   const data = { getMembers: async () => members };
   const nav = () => host.find((c) => c.tag === 'nav')[0];
   return { host, rail, clicks, data, nav };
@@ -63,4 +63,20 @@ test('the Notes rail shows Shared · Both, the name Notes and its line, whoever 
   assert.equal(text('rail-tag'), 'Little letters for the two of us. Only the two of you can read them.');
   rail.clear();
   assert.equal(text('rail-name'), '');
+});
+
+test('sample mode: the last section button is "Back to the three doors" (no Sign out) and still routes through signout', () => {
+  const { nav, clicks } = setup('today', null, true);
+  const buttons = nav().children;
+  assert.deepEqual(buttons.map((b) => b.textContent), ['Today', 'Look back', 'Save your journal', 'Back to the three doors']);
+  buttons[3].click();
+  assert.deepEqual(clicks, ['signout']);
+});
+
+test('sample mode: the Notes rail has one back link and no Sign out', () => {
+  const { host, clicks } = setup('notes', null, true);
+  const buttons = host.find((c) => c.tag === 'button');
+  assert.deepEqual(buttons.map((b) => b.textContent), ['Back to the three doors']);
+  buttons[0].click();
+  assert.deepEqual(clicks, ['front']);
 });

@@ -1,7 +1,8 @@
 import { MODE } from './config.js';
 import { tickPath, dotPath } from './lib/sigil.js';
 import { data } from './data/index.js';
-import { gateFor } from './doors.js';
+import { createDoors } from './open-door.js';
+import { createBanner } from './screens/banner.js';
 import { createSignIn } from './screens/signin.js';
 import { createToday } from './screens/today.js';
 import { createLookback } from './screens/lookback.js';
@@ -61,50 +62,45 @@ function showGate(title, text, who, signOut) {
   showScreen('gate', who);
 }
 
-function openDoor(door, signIn, today, notes) {
-  const session = data.currentSession();
-  const gate = gateFor(door, session);
-  if (gate === 'signin') {
-    // Notes has no login of its own: offer Hers, with a link to His.
-    if (door === 'notes') signIn.show('hers', 'notes');
-    else signIn.show(door, door);
-  } else if (gate === 'private') {
-    showGate('This journal is private.', 'Only its owner can open it. Your own journal and the shared Notes are still yours to open.', session.door, true);
-  } else if (door === 'notes') {
-    notes.show(session.door);
-  } else {
-    today.show(session.door);
-  }
-}
-
 function init() {
   fillSigils();
   applyTheme(readTheme(), false);
   document.getElementById('theme-toggle')?.addEventListener('click', () => {
     applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light', true);
   });
-  const banner = document.getElementById('sample-banner');
-  if (banner) banner.hidden = MODE !== 'demo';
+  const demo = MODE === 'demo';
   // One rail component, one instance per journal screen; sections share one router.
-  const railFor = (current) => createRail({ host: document.querySelector(`[data-rail="${current}"]`), current, onNavigate: (k) => router.navigate(k) });
+  const railFor = (current) => createRail({ host: document.querySelector(`[data-rail="${current}"]`), current, demo, onNavigate: (k) => router.navigate(k) });
   const rails = [railFor('today'), railFor('lookback'), railFor('save'), railFor('notes')];
   const today = createToday({ data, showScreen, rail: rails[0] });
   const lookback = createLookback({ data, showScreen, rail: rails[1], onNavigate: (k) => router.navigate(k) });
   const save = createExport({ data, showScreen, rail: rails[2] });
-  const notes = createNotes({ data, showScreen, rail: rails[3] });
-  const router = createRouter({ data, today, lookback, save, notes, rails, showScreen, showGate });
+  // Switching the Notes viewer: save what the person leaving was writing, then wipe it from memory.
+  const beforeSwitch = async () => {
+    try { await today.leave(); } catch (e) { /* a draft must never block the switch */ }
+    today.clear();
+    lookback.clear();
+    save.clear();
+  };
+  const notes = createNotes({ data, showScreen, rail: rails[3], demo, beforeSwitch });
+  const router = createRouter({ demo, data, today, lookback, save, notes, rails, showScreen, showGate });
   const signOut = router.signOut;
+  let doors;
   const signIn = createSignIn({
     data,
-    demo: MODE === 'demo',
+    demo,
     showScreen,
-    onSignedIn: (who, returnTo) => openDoor(returnTo || who, signIn, today, notes),
+    onSignedIn: (who, returnTo) => doors.openDoor(returnTo || who),
     onBack: () => showScreen('front'),
   });
+  doors = createDoors({ data, demo, today, lookback, save, notes, signIn, showGate });
+  // Sample mode: Reset sample data wipes everything (the same path as a real sign-out), then shows the front page.
+  const banner = createBanner({ onReset: signOut });
+  banner.show(demo);
   for (const link of document.querySelectorAll('a[data-door]')) {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      openDoor(link.dataset.door, signIn, today, notes);
+      doors.openDoor(link.dataset.door);
     });
   }
   document.getElementById('gate-back')?.addEventListener('click', (e) => {

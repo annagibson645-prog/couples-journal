@@ -21,7 +21,7 @@ class MemoryStorage {
 // A hand-driven adapter so a test decides exactly when notes arrive.
 function setup(over = {}) {
   const doc = makeNotesDom();
-  const calls = { addNote: [], deleteNote: [], listen: 0, unsub: 0, screens: [], rail: [] };
+  const calls = { addNote: [], deleteNote: [], listen: 0, unsub: 0, screens: [], rail: [], signIn: [], signOut: 0, order: [] };
   const listeners = new Set();
   let notes = over.notes || []; // newest first, like the adapters
   const emit = () => { for (const cb of [...listeners]) cb(notes.slice()); };
@@ -34,11 +34,13 @@ function setup(over = {}) {
       return () => { calls.unsub += 1; listeners.delete(cb); };
     },
     addNote: async (text) => { calls.addNote.push(text); notes = [{ id: 'n' + notes.length, authorDoor: over.door || 'hers', text, createdAt: NOW.getTime() }, ...notes]; emit(); return 'x'; },
+    signIn: async (door) => { calls.order.push('signIn'); calls.signIn.push(door); if (over.signInFails) throw new Error('nope'); },
+    signOut: async () => { calls.signOut += 1; },
     deleteNote: async (id) => { calls.deleteNote.push(id); notes = notes.filter((n) => n.id !== id); emit(); },
     ...over.data,
   };
   const rail = { show: (...a) => calls.rail.push(a), clear() {} };
-  const screen = createNotes({ data, document: doc, now: () => NOW, rail, showScreen: (...a) => calls.screens.push(a) });
+  const screen = createNotes({ data, document: doc, now: () => NOW, rail, showScreen: (...a) => calls.screens.push(a), beforeSwitch: async () => { calls.order.push('before'); }, ...over.screen });
   return {
     doc, data, calls, screen, rail, listeners,
     push(n) { notes = [n, ...notes]; emit(); },
@@ -400,4 +402,94 @@ test('a key-repeat Ctrl+Enter alone does not send', async () => {
   $('nt-text').dispatch('keydown', { key: 'Enter', ctrlKey: true, repeat: true });
   await tick();
   assert.equal(calls.addNote.length, 0);
+});
+
+// --- sample mode: the viewer switch ---------------------------------------
+const switchLabel = ($) => $('nt-switch').textContent;
+
+test('the viewer switch is hidden outside sample mode', async () => {
+  const { screen, $ } = setup({ notes: SAMPLE });
+  await screen.show('hers');
+  assert.equal($('nt-switch').hidden, true);
+});
+
+test('in sample mode the switch is a real button naming who is seen and who is next', async () => {
+  const { screen, $ } = setup({ notes: SAMPLE, screen: { demo: true } });
+  await screen.show('hers');
+  assert.equal($('nt-switch').hidden, false);
+  assert.equal(switchLabel($), 'Seen from Hers. Switch to His');
+  assert.equal($('nt-switch').type, 'button');
+  await screen.show('his');
+  assert.equal(switchLabel($), 'Seen from His. Switch to Hers');
+});
+
+test('switching signs in as the other person (never signs out), flips the sides, announces, keeps focus', async () => {
+  const { screen, $, calls, doc, items } = setup({ notes: SAMPLE, screen: { demo: true } });
+  await screen.show('hers');
+  $('nt-switch').focus();
+  $('nt-switch').click(); await tick(); await tick();
+  assert.deepEqual(calls.signIn, ['his']);
+  assert.equal(calls.signOut, 0);
+  assert.equal(switchLabel($), 'Seen from His. Switch to Hers');
+  assert.equal($('nt-live').textContent, 'Now seen from His');
+  assert.equal(doc.activeElement, $('nt-switch'));
+  const [a, b, c] = items();
+  assert.ok(a.className.includes('nt-own') && button(a, 'Delete').length === 1);
+  assert.ok(b.className.includes('nt-other') && button(b, 'Delete').length === 0);
+  assert.ok(c.className.includes('nt-own'));
+});
+
+test('switching back and forth never doubles the subscription or leaks a listener', async () => {
+  const { screen, $, calls, listeners, items } = setup({ notes: SAMPLE, screen: { demo: true } });
+  await screen.show('hers');
+  assert.equal(listeners.size, 1);
+  for (let i = 0; i < 4; i++) { $('nt-switch').click(); await tick(); await tick(); }
+  assert.equal(listeners.size, 1);
+  assert.equal(calls.listen, 5);
+  assert.equal(calls.unsub, 4);
+  assert.equal(items().length, 3);
+  assert.deepEqual(calls.signIn, ['his', 'hers', 'his', 'hers']);
+  assert.equal(switchLabel($), 'Seen from Hers. Switch to His');
+});
+
+test('a second press while a switch is in flight is ignored', async () => {
+  const { screen, $, calls } = setup({ notes: SAMPLE, screen: { demo: true } });
+  await screen.show('hers');
+  $('nt-switch').click(); $('nt-switch').click();
+  await tick(); await tick();
+  assert.deepEqual(calls.signIn, ['his']);
+});
+
+test('the person leaving is cleaned up first, and typed text never crosses over', async () => {
+  const { screen, $, calls } = setup({ notes: SAMPLE, screen: { demo: true } });
+  await screen.show('hers');
+  $('nt-text').value = 'a half-written note to him';
+  $('nt-text').dispatch('input');
+  $('nt-switch').click(); await tick(); await tick();
+  assert.deepEqual(calls.order, ['before', 'signIn']);
+  assert.equal($('nt-text').value, '');
+  assert.equal($('nt-count').hidden, true);
+});
+
+test('a failed switch keeps the current viewer and says so', async () => {
+  const { screen, $, calls, items, listeners } = setup({ notes: SAMPLE, signInFails: true, screen: { demo: true } });
+  await screen.show('hers');
+  $('nt-switch').click(); await tick(); await tick();
+  assert.equal($('nt-error').hidden, false);
+  assert.equal(switchLabel($), 'Seen from Hers. Switch to His');
+  assert.equal(calls.signOut, 0);
+  assert.equal(listeners.size, 1);
+  assert.ok(items()[1].className.includes('nt-own'));
+});
+
+test('an old listener cannot draw into the new viewer, and leave() stops the new one', async () => {
+  const { screen, $, listeners, calls } = setup({ notes: SAMPLE, screen: { demo: true } });
+  await screen.show('hers');
+  const old = [...listeners][0];
+  $('nt-switch').click(); await tick(); await tick();
+  old([note('zz', 'his', 'stale')]);
+  assert.equal($('nt-list').children.length, 3);
+  screen.leave();
+  assert.equal(listeners.size, 0);
+  assert.equal(calls.unsub, 2);
 });
