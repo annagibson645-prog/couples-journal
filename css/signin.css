@@ -1,0 +1,43 @@
+/* Sign-in and gate screens. The sigil itself is cloned from the front page and
+   styled by sigil.css; this file only lays out the two panels. */
+.signin { flex-direction: row; }
+.si-side { position: relative; flex: 0 0 41%; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 40px 28px; border-right: 1px solid var(--line); overflow: hidden; }
+.si-sigil { --size: 300px; position: relative; display: flex; justify-content: center; }
+.si-side .name { font-size: 56px; }
+.si-form { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column;
+  justify-content: center; padding: 40px 96px; }
+.si-label { margin: 0 0 14px; font: 400 10px 'JetBrains Mono', monospace; letter-spacing: .34em;
+  text-transform: uppercase; color: var(--acc); }
+.si-title { margin: 0; font: italic 400 44px/1.1 'Fraunces', serif; letter-spacing: -.015em; }
+.si-help { margin: 12px 0 0; max-width: 44ch; font: italic 400 18px/1.5 'Newsreader', serif; color: var(--muted); }
+#si-form { margin-top: 28px; display: flex; flex-direction: column; gap: 18px; max-width: 440px; }
+#si-form label { display: flex; flex-direction: column; gap: 8px; font: italic 400 17px 'Newsreader', serif; color: var(--muted); }
+#si-form input { padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line);
+  background: transparent; color: var(--fg); font: 400 18px 'Newsreader', serif; }
+#si-form input:focus { outline: 2px solid var(--acc); outline-offset: 2px; }
+#si-form input:disabled { opacity: .55; cursor: not-allowed; }
+.si-error { margin: 0; font: italic 400 17px 'Newsreader', serif; color: var(--fg); }
+.si-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 22px; margin-top: 6px; }
+.si-go { min-height: 50px; padding: 12px 34px; border: 0; border-radius: 999px; background: var(--acc);
+  color: var(--bg); font: italic 400 20px 'Newsreader', serif; cursor: pointer; transition: transform .2s; }
+.si-go:hover { transform: translateY(-2px); }
+.si-link { font: italic 400 17px 'Newsreader', serif; color: var(--muted); text-decoration: underline;
+  text-underline-offset: 4px; padding: 6px 0; }
+.si-link:hover { color: var(--acc); }
+.si-form > .si-link { align-self: flex-start; margin-top: 18px; }
+.si-form > .si-back { margin-top: 30px; }
+
+.gate { align-items: center; justify-content: center; padding: 40px 20px; }
+.gate-box { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.gate-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 14px 22px; margin-top: 28px; }
+
+@media (max-width: 760px) {
+  .signin { flex-direction: column; }
+  .si-side { flex: none; padding: 32px 20px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .si-sigil { --size: min(220px, 60vw); }
+  .si-side .name { font-size: 40px; }
+  .si-form { padding: 28px 20px 40px; }
+  .si-title { font-size: 34px; }
+}
+@media (prefers-reduced-motion: reduce) { .si-go { transition: none; } }
