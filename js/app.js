@@ -3,6 +3,7 @@ import { tickPath, dotPath } from './lib/sigil.js';
 import { data } from './data/index.js';
 import { gateFor } from './doors.js';
 import { createSignIn } from './screens/signin.js';
+import { createToday } from './screens/today.js';
 
 // Duplicated in the inline pre-paint script in index.html; keep in sync.
 const THEME_KEY = 'journal-theme';
@@ -47,16 +48,17 @@ function applyTheme(theme, save) {
   }
 }
 
-// A message screen: the private-journal notice, and a stand-in for the journal
-// screens that later tasks build. `signOut` shows the sign-out button.
-function showGate(title, text, who, signOut) {
+// A message screen: the private-journal notice, and a stand-in for the screens
+// later tasks build. `signOut` shows the sign-out button; `toToday` a way back to Today.
+function showGate(title, text, who, signOut, toToday) {
   document.getElementById('gate-title').textContent = title;
   document.getElementById('gate-text').textContent = text;
   document.getElementById('gate-signout').hidden = !signOut;
+  document.getElementById('gate-today').hidden = !toToday;
   showScreen('gate', who);
 }
 
-function openDoor(door, signIn) {
+function openDoor(door, signIn, today) {
   const session = data.currentSession();
   const gate = gateFor(door, session);
   if (gate === 'signin') {
@@ -65,9 +67,11 @@ function openDoor(door, signIn) {
     else signIn.show(door, door);
   } else if (gate === 'private') {
     showGate('This journal is private.', 'Only its owner can open it. Your own journal and the shared Notes are still yours to open.', session.door, true);
+  } else if (door === 'notes') {
+    // Notes replaces this stand-in in a later task.
+    showGate('Notes', 'The shared Notes arrive in the next build step.', session.door, true, true);
   } else {
-    // Today, Look back, Save and Notes replace this stand-in in later tasks.
-    showGate(`Signed in to ${session.door === 'hers' ? 'Hers' : 'His'}`, 'The journal screens arrive in the next build step.', session.door, true);
+    today.show(session.door);
   }
 }
 
@@ -79,25 +83,42 @@ function init() {
   });
   const banner = document.getElementById('sample-banner');
   if (banner) banner.hidden = MODE !== 'demo';
+  const today = createToday({
+    data,
+    showScreen,
+    onNavigate: (name) => {
+      // Look back and Save your journal replace this stand-in in later tasks.
+      const title = name === 'save' ? 'Save your journal' : 'Look back';
+      showGate(title, 'This part of the journal arrives in the next build step.', data.currentSession()?.door, true, true);
+    },
+    onSignOut: signOut,
+  });
+  async function signOut() {
+    today.clear();
+    try { await data.signOut(); } finally { showScreen('front'); }
+  }
   const signIn = createSignIn({
     data,
     demo: MODE === 'demo',
     showScreen,
-    onSignedIn: (who, returnTo) => openDoor(returnTo || who, signIn),
+    onSignedIn: (who, returnTo) => openDoor(returnTo || who, signIn, today),
     onBack: () => showScreen('front'),
   });
   for (const link of document.querySelectorAll('a[data-door]')) {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      openDoor(link.dataset.door, signIn);
+      openDoor(link.dataset.door, signIn, today);
     });
   }
   document.getElementById('gate-back')?.addEventListener('click', (e) => {
     e.preventDefault();
     showScreen('front');
   });
-  document.getElementById('gate-signout')?.addEventListener('click', async () => {
-    try { await data.signOut(); } finally { showScreen('front'); }
+  document.getElementById('gate-signout')?.addEventListener('click', signOut);
+  document.getElementById('gate-today')?.addEventListener('click', () => {
+    const s = data.currentSession();
+    if (s) today.show(s.door);
+    else showScreen('front');
   });
   showScreen('front');
 }

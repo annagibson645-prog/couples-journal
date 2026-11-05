@@ -31,3 +31,12 @@ test('door links are labelled by their name heading', () => {
   assert.equal((html.match(/aria-labelledby="name-(hers|notes|his)"/g) || []).length, 3);
   assert.match(html, /family=Newsreader:ital,wght@0,400;1,400/);
 });
+
+test('today screen has the moon group, writing box, save button and an alert area', () => {
+  for (const id of ['screen-today', 'td-moons', 'td-note', 'td-text', 'td-save', 'td-list', 'td-nav']) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  assert.match(html, /id="td-error"[^>]*role="alert"/);
+  assert.match(html, />Nothing here yet\. Write whenever you're ready\.</);
+  assert.match(html, /href="css\/journal\.css"/);
+});
