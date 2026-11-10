@@ -45,7 +45,8 @@ function setup(over = {}) {
     doc, data, calls, screen, rail, listeners,
     push(n) { notes = [n, ...notes]; emit(); },
     $: (id) => doc.byId[id],
-    items: () => doc.byId['nt-list'].children,
+    items: () => doc.byId['nt-list'].children.filter((c) => c.className.split(' ').includes('nt-note')),
+    rows: () => doc.byId['nt-list'].children,
   };
 }
 const note = (id, door, text, when = t(5, 8, 40)) => ({ id, authorDoor: door, text, createdAt: when });
@@ -364,18 +365,19 @@ test('works on the real demo adapter: Hers writes, His sees it, only own notes h
   const hers = make();
   await hers.show('hers');
   const list = doc.byId['nt-list'];
-  const before = list.children.length;
+  const notesIn = () => list.children.filter((c) => c.className.split(' ').includes('nt-note'));
+  const before = notesIn().length;
   doc.byId['nt-text'].value = 'A little note';
   doc.byId['nt-send'].click(); await tick();
-  assert.equal(list.children.length, before + 1);
+  assert.equal(notesIn().length, before + 1);
   assert.equal(list.children.at(-1).byClass('nt-text')[0].textContent, 'A little note');
   hers.leave();
   await adapter.signOut();
   await adapter.signIn('his');
   const his = make();
   await his.show('his');
-  assert.ok(list.children.length > 0);
-  for (const li of list.children) {
+  assert.ok(notesIn().length > 0);
+  for (const li of notesIn()) {
     assert.equal(button(li, 'Delete').length, li.className.includes('nt-own') ? 1 : 0);
   }
   his.leave();
@@ -496,8 +498,89 @@ test('an old listener cannot draw into the new viewer, and leave() stops the new
   const old = [...listeners][0];
   $('nt-switch').click(); await tick(); await tick();
   old([note('zz', 'his', 'stale')]);
-  assert.equal($('nt-list').children.length, 3);
+  assert.equal($('nt-list').children.filter((c) => c.className.includes('nt-note')).length, 3);
   screen.leave();
   assert.equal(listeners.size, 0);
   assert.equal(calls.unsub, 2);
+});
+
+// --- the thread of light ----------------------------------------------------
+const cls = (e) => e.className.split(' ');
+const seps = (rows) => rows.filter((c) => cls(c).includes('nt-sep'));
+
+test('a day separator appears whenever the local day changes, and not between notes of one day', async () => {
+  const { screen, rows } = setup({ notes: [
+    note('d', 'his', 'late', t(5, 9, 0)),
+    note('c', 'hers', 'early', t(5, 7, 15)),
+    note('b', 'his', 'last night', t(4, 23, 50)),
+    note('a', 'hers', 'old', t(1, 8, 0)),
+  ] });
+  await screen.show('hers');
+  assert.deepEqual(rows().map((x) => (cls(x).includes('nt-sep') ? `sep:${x.textContent}` : x.byClass('nt-text')[0].textContent)),
+    ['sep:1 November', 'old', 'sep:Yesterday', 'last night', 'sep:Today', 'early', 'late']);
+});
+
+test('separators use local days: 23:59 and 00:01 land on different days, even a minute apart', async () => {
+  const { screen, rows } = setup({ notes: [note('b', 'his', 'b', t(5, 0, 1)), note('a', 'hers', 'a', t(4, 23, 59))] });
+  await screen.show('hers');
+  assert.deepEqual(seps(rows()).map((x) => x.textContent), ['Yesterday', 'Today']);
+});
+
+test('no separator is drawn for a note with no usable time', async () => {
+  const { screen, rows } = setup({ notes: [{ id: 'x', authorDoor: 'hers', text: 'undated' }] });
+  await screen.show('hers');
+  assert.equal(seps(rows()).length, 0);
+});
+
+test('a separator is plain text, not a control', async () => {
+  const { screen, rows } = setup({ notes: SAMPLE });
+  await screen.show('hers');
+  assert.ok(seps(rows()).length > 0);
+  for (const s of seps(rows())) {
+    assert.equal(s.children.length, 0);
+    assert.equal(s.find((x) => x.tag === 'button').length, 0);
+  }
+});
+
+test('each note has an aria-hidden dot on the thread, a card, and the author name and time', async () => {
+  const { screen, items } = setup({ notes: SAMPLE });
+  await screen.show('hers');
+  await tick();
+  for (const li of items()) {
+    const dot = li.children.find((c) => cls(c).includes('nt-dot'));
+    assert.ok(dot, 'the dot is a direct child of the note, so it can sit on the line');
+    assert.equal(dot.getAttribute('aria-hidden'), 'true');
+    assert.equal(li.byClass('nt-card').length, 1);
+  }
+  const [a, b] = items();
+  assert.ok(cls(a).includes('nt-by-his') && cls(b).includes('nt-by-hers'));
+  assert.ok(a.byClass('nt-meta')[0].textContent.startsWith('Sam'));
+});
+
+test('the sides still follow the viewer: own right, other left, with separators between', async () => {
+  const { screen, $, items, rows } = setup({ notes: SAMPLE, screen: { demo: true } });
+  await screen.show('hers');
+  assert.equal(rows().length, 5); // 2 separators + 3 notes
+  assert.deepEqual(items().map((x) => cls(x).includes('nt-own')), [false, true, false]);
+  $('nt-switch').click(); await tick(); await tick();
+  assert.deepEqual(items().map((x) => cls(x).includes('nt-own')), [true, false, true]);
+});
+
+test('a note arriving on the same day adds no separator', async () => {
+  const { screen, push, rows } = setup({ notes: [note('a', 'his', 'first', t(5, 8, 0))] });
+  await screen.show('hers');
+  assert.equal(seps(rows()).length, 1);
+  push(note('b', 'his', 'second', t(5, 11, 0)));
+  assert.equal(seps(rows()).length, 1);
+  assert.equal(rows().length, 3);
+});
+
+test('Delete sits on the card, the confirm pair replaces it, and focus follows', async () => {
+  const { screen, doc, items } = setup({ notes: SAMPLE });
+  await screen.show('hers');
+  const card = items()[1].byClass('nt-card')[0];
+  assert.equal(button(card, 'Delete').length, 1);
+  button(card, 'Delete')[0].click();
+  assert.equal(doc.activeElement.textContent, 'Yes, delete');
+  assert.equal(button(items()[1], 'Keep it').length, 1);
 });

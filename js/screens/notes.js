@@ -1,8 +1,9 @@
-// Notes screen: little letters between the two of them. A composer and a feed,
-// oldest at the top and newest at the bottom, like a conversation. The signed-in
+// Notes screen: little letters between the two of them, drawn as a thread of light: a
+// glowing line down the feed, a pill for each day, a dot for each note, and the composer
+// pinned below. Oldest at the top and newest at the bottom, like a conversation. The signed-in
 // person's own notes sit on the right (with Delete); the other person's on the left.
 // Every piece of user text goes in with textContent.
-import { NOTE_MAX, formatNoteTime, countLabel, checkNote, isOwn, authorOf, oldestFirst } from '../lib/notes.js';
+import { NOTE_MAX, formatNoteTime, countLabel, checkNote, isOwn, authorOf, oldestFirst, dayLabel, dayKey } from '../lib/notes.js';
 import { makeEl, messageOf } from './shared.js';
 
 const LABEL = { hers: 'Hers', his: 'His' };
@@ -72,15 +73,20 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
     if (confirming && !list.some((n) => n.id === confirming)) confirming = null;
     $('nt-empty').hidden = list.length > 0;
     const nowMs = now().getTime();
+    let lastDay = null;
     for (const n of list) {
+      const day = dayKey(n.createdAt);
+      if (day && day !== lastDay) ul.appendChild(el('li', 'nt-sep', dayLabel(n.createdAt, nowMs)));
+      if (day) lastDay = day;
       const own = isOwn(n, viewer);
       const by = authorOf(n);
       const when = formatNoteTime(n.createdAt, nowMs);
       const li = el('li', `nt-note ${own ? 'nt-own' : 'nt-other'}${by ? ` nt-by-${by}` : ''}`);
-      const meta = el('div', 'nt-meta');
       const dot = el('span', 'nt-dot');
       dot.setAttribute('aria-hidden', 'true');
-      meta.append(dot, el('span', 'nt-who', by ? names[by] : ''), el('span', 'nt-when', when));
+      const card = el('div', 'nt-card');
+      const meta = el('div', 'nt-meta');
+      meta.append(el('span', 'nt-who', by ? names[by] : ''), el('span', 'nt-when', when));
       if (own) {
         if (confirming === n.id) {
           meta.appendChild(el('span', 'nt-confirm-q', 'Delete this note?'));
@@ -93,7 +99,8 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
           meta.appendChild(del);
         }
       }
-      li.append(meta, el('p', 'nt-text', n.text));
+      card.append(meta, el('p', 'nt-text', n.text));
+      li.append(dot, card);
       ul.appendChild(li);
     }
     if (typeof top === 'number') feed.scrollTop = top;
