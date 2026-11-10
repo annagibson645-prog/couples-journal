@@ -76,7 +76,11 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
     let lastDay = null;
     for (const n of list) {
       const day = dayKey(n.createdAt);
-      if (day && day !== lastDay) ul.appendChild(el('li', 'nt-sep', dayLabel(n.createdAt, nowMs)));
+      if (day && day !== lastDay) {
+        const sep = el('li', 'nt-sep', dayLabel(n.createdAt, nowMs));
+        sep.setAttribute('role', 'presentation'); // a day label, not a note: not counted as a list item
+        ul.appendChild(sep);
+      }
       if (day) lastDay = day;
       const own = isOwn(n, viewer);
       const by = authorOf(n);

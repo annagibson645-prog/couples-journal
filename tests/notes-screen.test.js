@@ -584,3 +584,12 @@ test('Delete sits on the card, the confirm pair replaces it, and focus follows',
   assert.equal(doc.activeElement.textContent, 'Yes, delete');
   assert.equal(button(items()[1], 'Keep it').length, 1);
 });
+
+test('day separators are role="presentation", so screen readers count only the notes as list items', async () => {
+  const { screen, rows } = setup({ notes: SAMPLE });
+  await screen.show('hers');
+  const sp = seps(rows());
+  assert.ok(sp.length > 0);
+  for (const s of sp) assert.equal(s.getAttribute('role'), 'presentation');
+  for (const r of rows().filter((c) => !seps([c]).length)) assert.equal(r.getAttribute('role'), null);
+});

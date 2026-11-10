@@ -65,14 +65,18 @@
 .nt-count { margin: 6px 0 0; text-align: right; font: 400 12px 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; letter-spacing: .06em; color: var(--muted); }
 
 @media (max-width: 760px) {
-  .rail-tag { font-size: 15px; margin-top: 6px; }
-  .nt-main { --nt-line-x: 22px; }
-  .nt-feed { max-height: 60vh; max-height: 60dvh; padding: 4px 4px 4px 0; }
+  /* The tagline is hidden on phones but stays for screen readers. */
+  .rail-tag { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .nt-main { --nt-line-x: 22px; padding-top: 12px; }
+  .nt-head .td-date { font-size: 30px; }
+  .nt-switch { min-height: 44px; padding: 6px 16px; }
+  .nt-feed { min-height: 180px; max-height: 60vh; max-height: calc(100dvh - 400px); padding: 4px 4px 4px 0; }
+  .nt-foot { position: static; }
   .nt-note { justify-content: flex-start; }
   .nt-card { width: calc(100% - 46px); margin-left: 46px; padding: 10px 14px; }
   .nt-sep { margin: 2px 0 14px 46px; }
   .nt-text { font-size: 19px; }
-  .nt-compose { flex-direction: column; align-items: stretch; }
-  .nt-send { align-self: flex-end; }
+  .nt-area { height: 56px; min-height: 56px; }
+  .nt-send { padding: 12px 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .nt-dot { animation: none; opacity: 1; } }

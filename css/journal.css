@@ -65,12 +65,15 @@
 @media (max-width: 760px) {
   .jscreen { flex-direction: column; }
   .rail { flex: none; border-right: 0; border-bottom: 1px solid var(--line); }
-  .rail-in { position: relative; top: 0; padding: 24px 16px 12px; }
-  .rail-sigil { --size: 120px; }
-  .rail .kicker { margin-top: 16px; }
-  .rail-name { font-size: 34px; margin-top: 6px; }
-  .rail-nav { margin-top: 10px; flex-direction: row; flex-wrap: wrap; justify-content: center; }
-  .td-main { padding: 24px 16px 40px; max-width: none; }
+  /* Phone: a slim strip, not a tall column: a small sigil beside the label and name, the links in one wrapping row below. */
+  .rail-in { position: relative; top: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr); grid-template-rows: auto auto auto;
+    column-gap: 14px; align-items: center; justify-items: start; padding: 8px 16px 4px; }
+  .rail-sigil { --size: 64px; grid-column: 1; grid-row: 1 / span 2; justify-self: center; }
+  .rail .kicker { grid-column: 2; grid-row: 1; margin: 0; text-align: left; align-self: end; }
+  .rail-name { grid-column: 2; grid-row: 2; font-size: 30px; margin: 0; text-align: left; align-self: start; }
+  .rail-nav { grid-column: 1 / -1; grid-row: 3; margin-top: 0; flex-direction: row; flex-wrap: wrap; justify-content: flex-start; justify-self: stretch; font-size: 17px; }
+  .rail-nav button { padding: 0 10px; }
+  .td-main { padding: 16px 16px 32px; max-width: none; }
   .td-date { font-size: 34px; }
   .td-moons { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; max-width: 360px; }
   .td-scale { max-width: 360px; }
