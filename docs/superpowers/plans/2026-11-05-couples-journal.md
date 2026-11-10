@@ -147,6 +147,17 @@ The user wants to show the published sample site to the friend with no login. In
 - [ ] **Step 3:** Add the Notes viewer switch to the Notes screen (demo mode only): a button "Seen from Hers. Switch to His" / "Seen from His. Switch to Hers" that signs in as the other person with `data.signIn` (never `signOut`), re-subscribes the feed without double subscriptions, and keeps focus on the button.
 - [ ] **Step 4:** Check in a browser at 375px and 1280px in both themes: every column opens straight in; Today, Look back, Save, Notes all work as both people; switching the Notes viewer shows each side's notes; Reset sample data works; no console errors. Commit `feat: no-login sample mode`.
 
+### Task 7e: Notes as a thread of light (the user's chosen design)
+
+**Files:** Modify `js/screens/notes.js`, `js/lib/notes.js` (day labels), `css/notes.css`, `index.html` (the Notes markup), the built `css/app.css`; Create `js/started.js`; Test `tests/notes-screen.test.js` (extend), `tests/notes.test.js` (extend), `tests/build.test.js` (extend)
+
+**Interfaces:** Consumes the Notes data interface unchanged (`addNote`, `listenNotes`, `deleteNote`). Produces: the feed as a vertical glowing thread with day separators and per-note dots; `dayLabel(createdAt: number, now: number): string` in `js/lib/notes.js` returning "Today", "Yesterday" or a long date like "31 October" (local calendar days, timezone-safe); `js/started.js` which only sets `globalThis.__journalStarted = true`.
+
+- [ ] **Step 1:** Write failing tests: `dayLabel` for today, yesterday, an older date and across midnight and the autumn clock change (TZ pinned); the feed renders a day separator whenever the local day changes and none between two notes of the same day; own notes right and the other person's left; each note has a dot in its author's colour; every behaviour already tested for Notes still passes (2,000-character limit, duplicate-send guard, listener lifecycle, delete confirm and focus, live regions, viewer switch in demo mode, textContent only, the scroll-yank rule and the "New note" button).
+- [ ] **Step 2:** Build the thread to match the design board `NotesThread` (central glowing line, day separators, author-coloured dots with a slow pulse that stops under reduced motion, cards with the author's tint, composer pinned at the bottom). At phone width (under 760px) the thread collapses to one column with the line on the left edge; notes are never wider than the screen; targets stay at least 44px. Both themes.
+- [ ] **Step 3:** Cache-safety for the start signal: add `js/started.js` (sets `globalThis.__journalStarted = true`) and make the generated `js/boot.js` import it right after `./app.js` (so the flag no longer depends on app.js, which a returning visitor may still have cached for up to 10 minutes); keep the flag in app.js too; update the build and its drift test.
+- [ ] **Step 4:** Check in a browser at 375px and 1280px, both themes, as Hers and His (use the viewer switch): sample notes across several days, a long note, an emoji note, no console errors, no horizontal scroll. Commit `feat: notes as a thread of light`.
+
 ### Task 8: Publish the front end to GitHub Pages
 
 **Files:** Modify `README.md`

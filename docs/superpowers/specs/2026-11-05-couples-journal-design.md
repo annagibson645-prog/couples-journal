@@ -30,7 +30,7 @@ All screens use the Orbital sigils look and have a Light mode / Dark mode switch
 3. **Today:** a left rail with the person's symbol, name and section links (Today, Look back, Save your journal, Sign out). On the right: the date, ten moon buttons for the daily mood (new moon = heavy, full moon = bright, with a word for the choice), an optional few words, a big writing box, and "Save entry" with a "Saved on this device, then synced" status.
 4. **Look back:** a line chart of the last 30 days, a month calendar with days tinted by mood (same accent colour, stronger = brighter), and a detail panel for the chosen day with its mood, note and entry count.
 5. **Save your journal:** PDF, Word, Markdown and plain text, each with a Save button; a one-line Google Docs tip; "Advanced: backup file" collapsed.
-6. **Notes:** a left rail with the violet symbol, a composer at the top ("Leave note"), and a feed. The viewer's own notes sit on the right with a Delete link; the other person's notes sit on the left. Author colours: pink for Hers, blue for His.
+6. **Notes:** a left rail with the violet symbol, a composer pinned at the bottom ("Leave note"), and the feed drawn as a thread of light: a glowing line runs down the middle with day labels ("Today", "Yesterday", "31 October") and a small glowing dot on the line for each note, in the author's colour. On a phone the line moves to the left edge and notes stack in one column. The viewer's own notes sit on the right with a Delete link; the other person's notes sit on the left. Author colours: pink for Hers, blue for His.
 
 ## Look and feel
 - **Fonts:** Fraunces italic for names and headings, Newsreader for reading and form text, JetBrains Mono for the small spaced-out label above each name.
