@@ -10,6 +10,7 @@ export class El {
   set textContent(v) { this.children = []; this._text = String(v); }
   setAttribute(k, v) { this.attrs[k] = String(v); }
   getAttribute(k) { return this.attrs[k] ?? null; }
+  removeAttribute(k) { delete this.attrs[k]; }
   append(...n) { for (const c of n) this.appendChild(c); }
   appendChild(n) { n.parent = this; this.children.push(n); return n; }
   replaceChildren(...n) { for (const c of this.children) c.parent = null; this.children = []; this._text = ''; for (const c of n) this.appendChild(c); }
@@ -90,5 +91,20 @@ export function makeBannerDom() {
   doc.createElement = (t) => new El(doc, t);
   doc.getElementById = (id) => doc.byId[id] || null;
   for (const id of BANNER_IDS) { doc.byId[id] = new El(doc, 'x'); doc.byId[id].root = true; }
+  return doc;
+}
+
+// A page with a body, two "page" regions and a classList on <html>: what the send dialog needs.
+export function makeSheetDom() {
+  const doc = { activeElement: null, byId: {}, listeners: {} };
+  doc.createElement = (t) => new El(doc, t);
+  doc.getElementById = (id) => doc.byId[id] || null;
+  doc.addEventListener = (t, f) => { (doc.listeners[t] ||= []).push(f); };
+  doc.removeEventListener = (t, f) => { doc.listeners[t] = (doc.listeners[t] || []).filter((x) => x !== f); };
+  doc.body = new El(doc, 'body'); doc.body.root = true;
+  const classes = new Set();
+  doc.documentElement = { classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c), contains: (c) => classes.has(c) } };
+  doc.page = [new El(doc, 'header'), new El(doc, 'main')];
+  for (const p of doc.page) doc.body.appendChild(p);
   return doc;
 }
