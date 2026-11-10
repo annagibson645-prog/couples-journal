@@ -55,3 +55,25 @@ export function authorOf(note) {
 export function oldestFirst(notes) {
   return notes.slice().reverse().sort((a, b) => a.createdAt - b.createdAt);
 }
+
+const LONG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// The local calendar day a time falls on, as a string to compare ('' for a bad time).
+export function dayKey(ms) {
+  if (typeof ms !== 'number' || !Number.isFinite(ms)) return '';
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+// The label on a day separator: "Today", "Yesterday", otherwise "31 October" (with the
+// year only when it is not the current year). Local calendar days, like formatNoteTime.
+export function dayLabel(ms, nowMs = Date.now()) {
+  if (typeof ms !== 'number' || !Number.isFinite(ms)) return '';
+  const d = new Date(ms);
+  const now = new Date(nowMs);
+  const ago = daysBetween(d, now);
+  if (ago === 0) return 'Today';
+  if (ago === 1) return 'Yesterday';
+  const date = `${d.getDate()} ${LONG_MONTHS[d.getMonth()]}`;
+  return d.getFullYear() === now.getFullYear() ? date : `${date} ${d.getFullYear()}`;
+}

@@ -66,12 +66,12 @@ test('head sets background and text colour for both themes before any stylesheet
   assert.ok(head.indexOf("localStorage.getItem('journal-theme')") < head.indexOf('html{background'), 'theme is applied before the style');
 });
 
-test('js/boot.js is up to date, flat, lists every module once with app.js last', () => {
+test('js/boot.js is up to date, flat, lists every module once with app.js then started.js last', () => {
   assert.equal(read('js/boot.js'), buildBoot());
   const imports = [...read('js/boot.js').matchAll(/^import '(\.\/[^']+)';$/gm)].map((m) => `js/${m[1].slice(2)}`);
   const { files } = importGraph('js/app.js');
-  assert.equal(imports.at(-1), 'js/app.js');
-  assert.deepEqual([...imports].sort(), files, 'exactly the modules the app imports, each once');
+  assert.deepEqual(imports.slice(-2), ['js/app.js', 'js/started.js']);
+  assert.deepEqual([...imports].filter((f) => f !== 'js/started.js').sort(), files, 'exactly the modules the app imports, each once');
   assert.equal(new Set(imports).size, imports.length);
   assert.ok(!imports.includes('js/boot.js'));
 });
@@ -79,11 +79,23 @@ test('js/boot.js is up to date, flat, lists every module once with app.js last',
 test('from js/boot.js every module is at most 2 levels deep for the browser (old iOS has no modulepreload)', () => {
   const g = importGraph('js/boot.js');
   assert.ok(g.depth <= 2, `depth ${g.depth}`);
-  assert.equal(g.files.length, importGraph('js/app.js').files.length + 1);
+  assert.equal(g.files.length, importGraph('js/app.js').files.length + 2);
 });
 
 test('index.html loads js/boot.js as the only module script, after the guard', () => {
   const html = read('index.html');
   const scripts = [...html.matchAll(/<script type="module" src="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(scripts, ['js/boot.js']);
+});
+
+test('js/boot.js imports js/started.js right after ./app.js, and started.js only sets the flag', () => {
+  const lines = read('js/boot.js').split('\n').filter((l) => l.startsWith('import '));
+  const at = lines.indexOf("import './app.js';");
+  assert.ok(at >= 0);
+  assert.equal(lines[at + 1], "import './started.js';");
+  assert.equal(lines.at(-1), "import './started.js';");
+  const src = read('js/started.js');
+  assert.match(src, /globalThis\.__journalStarted = true;/);
+  assert.doesNotMatch(src, /^\s*import /m);
+  assert.match(read('js/app.js'), /globalThis\.__journalStarted = true;/, 'app.js keeps setting it too');
 });

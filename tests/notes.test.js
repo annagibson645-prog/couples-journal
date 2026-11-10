@@ -3,7 +3,7 @@
 process.env.TZ = 'America/Los_Angeles';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NOTE_MAX, formatNoteTime, countLabel, checkNote, isOwn, authorOf, oldestFirst } from '../js/lib/notes.js';
+import { NOTE_MAX, formatNoteTime, countLabel, checkNote, isOwn, authorOf, oldestFirst, dayLabel, dayKey } from '../js/lib/notes.js';
 
 const at = (y, m, d, h, min) => new Date(y, m, d, h, min).getTime();
 const NOW = at(2026, 10, 5, 12, 0); // 5 November 2026, midday
@@ -82,4 +82,29 @@ test('sample notes are never dated in the future, whatever time of day the sampl
     const today = new Date(2026, 10, 5, hour, 30);
     for (const n of buildSeed(today).notes) assert.ok(n.createdAt < today.getTime(), `hour ${hour}`);
   }
+});
+
+test('dayLabel: Today, Yesterday, otherwise a long date; the year only when it is not this year', () => {
+  assert.equal(dayLabel(at(2026, 10, 5, 8, 40), NOW), 'Today');
+  assert.equal(dayLabel(at(2026, 10, 4, 21, 2), NOW), 'Yesterday');
+  assert.equal(dayLabel(at(2026, 9, 31, 20, 0), NOW), '31 October');
+  assert.equal(dayLabel(at(2026, 0, 1, 9, 0), NOW), '1 January');
+  assert.equal(dayLabel(at(2025, 11, 25, 9, 0), NOW), '25 December 2025');
+  assert.equal(dayLabel(undefined, NOW), '');
+  assert.equal(dayLabel(NaN, NOW), '');
+});
+
+test('dayLabel works across midnight and the autumn clock change (local calendar days)', () => {
+  const justAfterMidnight = at(2026, 10, 5, 0, 20);
+  assert.equal(dayLabel(at(2026, 10, 4, 23, 30), justAfterMidnight), 'Yesterday');
+  assert.equal(dayLabel(at(2026, 10, 5, 0, 10), justAfterMidnight), 'Today');
+  assert.equal(dayLabel(at(2026, 9, 31, 22, 0), at(2026, 10, 2, 7, 0)), '31 October');
+  assert.equal(dayLabel(at(2026, 10, 1, 22, 0), at(2026, 10, 2, 7, 0)), 'Yesterday');
+  assert.equal(dayLabel(at(2026, 10, 1, 0, 30), at(2026, 10, 1, 23, 50)), 'Today'); // the 25-hour day
+});
+
+test('dayKey is the local calendar day, so 23:59 and 00:01 differ and 00:01 and 23:59 of one day match', () => {
+  assert.notEqual(dayKey(at(2026, 10, 4, 23, 59)), dayKey(at(2026, 10, 5, 0, 1)));
+  assert.equal(dayKey(at(2026, 10, 5, 0, 1)), dayKey(at(2026, 10, 5, 23, 59)));
+  assert.equal(dayKey(NaN), '');
 });
