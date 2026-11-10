@@ -24,7 +24,8 @@ export function insertAtCaret(value, selStart, selEnd, heard) {
   if (!words) return { value: text, caret: from };
   const before = text.slice(0, from);
   const after = text.slice(to);
-  const lead = before && !/\s$/.test(before) ? ' ' : '';
+  // No space before heard text that starts with punctuation, nor after an opening bracket or quote.
+  const lead = before && !/[\s(\[{"“‘']$/.test(before) && !/^[.,;:!?)\]}]/.test(words) ? ' ' : '';
   const trail = after && !/^[\s.,;:!?)\]}]/.test(after) ? ' ' : '';
   const caret = before.length + lead.length + words.length;
   return { value: before + lead + words + trail + after, caret };

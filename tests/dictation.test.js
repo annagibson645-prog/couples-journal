@@ -75,3 +75,14 @@ test('restartDelay: grows with each failed attempt and is capped', () => {
   assert.ok(restartDelay(-3) > 0);
   assert.ok(restartDelay(NaN) > 0);
 });
+
+test('insertAtCaret: no space before punctuation that follows, none after an opening bracket or quote', () => {
+  assert.deepEqual(insertAtCaret('hello', 5, 5, ', world'), { value: 'hello, world', caret: 12 });
+  for (const p of ['.', ',', ';', ':', '!', '?', ')', ']', '}']) {
+    assert.equal(insertAtCaret('word', 4, 4, `${p} next`).value, `word${p} next`, p);
+  }
+  for (const o of ['(', '[', '{', '"', '“', '‘', "'"]) {
+    assert.equal(insertAtCaret(`say ${o}`, 5, 5, 'hi').value, `say ${o}hi`, o);
+  }
+  assert.equal(insertAtCaret('plain', 5, 5, 'text').value, 'plain text');
+});
