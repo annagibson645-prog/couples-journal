@@ -328,3 +328,15 @@ test('a person cannot delete the other person\'s note through the adapter; they 
   assert.ok(!notes.some((n) => n.id === mineId));
   stop();
 });
+
+test('addNote with { source: "entry" } stores and returns the source; anything else is ignored', async () => {
+  const { data } = fresh();
+  await data.signIn('hers');
+  const a = await data.addNote('from my journal', { source: 'entry' });
+  const b = await data.addNote('typed in notes');
+  const c = await data.addNote('odd source', { source: 'weird' });
+  const d = await data.addNote('no opts object', {});
+  const notes = notesNow(data);
+  assert.equal(notes.find((n) => n.id === a).source, 'entry');
+  for (const id of [b, c, d]) assert.equal('source' in notes.find((n) => n.id === id), false);
+});

@@ -4,6 +4,7 @@
 // person's own notes sit on the right (with Delete); the other person's on the left.
 // Every piece of user text goes in with textContent.
 import { NOTE_MAX, formatNoteTime, countLabel, checkNote, isOwn, authorOf, oldestFirst, dayLabel, dayKey } from '../lib/notes.js';
+import { sourceLabel } from '../lib/send.js';
 import { makeEl, messageOf } from './shared.js';
 
 const LABEL = { hers: 'Hers', his: 'His' };
@@ -91,6 +92,8 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
       const card = el('div', 'nt-card');
       const meta = el('div', 'nt-meta');
       meta.append(el('span', 'nt-who', by ? names[by] : ''), el('span', 'nt-when', when));
+      // Words copied in from a journal entry carry a small label naming whose journal (the author's, not the viewer's).
+      if (n.source === 'entry' && by) meta.appendChild(el('span', 'nt-from', sourceLabel(by)));
       if (own) {
         if (confirming === n.id) {
           meta.appendChild(el('span', 'nt-confirm-q', 'Delete this note?'));

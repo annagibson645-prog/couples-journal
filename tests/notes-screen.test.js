@@ -593,3 +593,14 @@ test('day separators are role="presentation", so screen readers count only the n
   for (const s of sp) assert.equal(s.getAttribute('role'), 'presentation');
   for (const r of rows().filter((c) => !seps([c]).length)) assert.equal(r.getAttribute('role'), null);
 });
+
+test('a note sent from a journal shows "From her/his journal" by its AUTHOR, other notes do not', async () => {
+  const mk = (id, door, source) => ({ id, authorDoor: door, text: id, createdAt: NOW.getTime() - 1000 * (10 - id.length), ...(source ? { source } : {}) });
+  const s = setup({ notes: [mk('aaaa', 'his', 'entry'), mk('bbb', 'hers', 'entry'), mk('cc', 'hers')] });
+  await s.screen.show('hers'); // the viewer is Hers
+  const labelOf = (id) => s.items().find((li) => li.byClass('nt-text')[0].textContent === id).byClass('nt-from').map((x) => x.textContent);
+  assert.deepEqual(labelOf('aaaa'), ['From his journal']); // his note seen by her: his journal
+  assert.deepEqual(labelOf('bbb'), ['From her journal']);
+  assert.deepEqual(labelOf('cc'), []);
+  assert.equal(s.items().length, 3);
+});

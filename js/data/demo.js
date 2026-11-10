@@ -173,11 +173,11 @@ export function createDemoAdapter(given) {
       commit({ ...m, entries: m.entries.filter((e) => e.id !== id) });
     },
 
-    async addNote(text) {
+    async addNote(text, opts) {
       const s = requireSession();
       if (typeof text !== 'string' || !text.trim()) throw new Error('Write something first.');
       const id = newId('n');
-      write('notes', [...(read('notes') || []), { id, authorDoor: s.door, text, createdAt: Date.now() }]);
+      write('notes', [...(read('notes') || []), { id, authorDoor: s.door, text, createdAt: Date.now(), ...(opts && opts.source === 'entry' ? { source: 'entry' } : {}) }]);
       emitNotes();
       return id;
     },
