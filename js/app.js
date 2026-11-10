@@ -10,6 +10,7 @@ import { createExport } from './screens/export.js';
 import { createNotes } from './screens/notes.js';
 import { createRail } from './screens/rail.js';
 import { createRouter } from './router.js';
+import { guarded } from './lib/fatal.js';
 
 // Duplicated in the inline pre-paint script in index.html; keep in sync.
 const THEME_KEY = 'journal-theme';
@@ -86,11 +87,13 @@ function init() {
   const router = createRouter({ demo, data, today, lookback, save, notes, rails, showScreen, showGate });
   const signOut = router.signOut;
   let doors;
+  // A door that fails to open shows a visible message with Reload instead of doing nothing.
+  const open = guarded((door) => doors.openDoor(door));
   const signIn = createSignIn({
     data,
     demo,
     showScreen,
-    onSignedIn: (who, returnTo) => doors.openDoor(returnTo || who),
+    onSignedIn: (who, returnTo) => open(returnTo || who),
     onBack: () => showScreen('front'),
   });
   doors = createDoors({ data, demo, today, lookback, save, notes, signIn, showGate });
@@ -100,7 +103,7 @@ function init() {
   for (const link of document.querySelectorAll('a[data-door]')) {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      doors.openDoor(link.dataset.door);
+      open(link.dataset.door);
     });
   }
   document.getElementById('gate-back')?.addEventListener('click', (e) => {
