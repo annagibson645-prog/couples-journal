@@ -1,6 +1,6 @@
 # Couples Journal
 
-A small private two-person journal. Plain static site: HTML, CSS and ES modules, no build step.
+A small private two-person journal. Plain static site: HTML, CSS and ES modules. No build step is needed on the host (a small optional script regenerates committed files, see Build step below).
 
 The live site is a sample-mode preview with invented data; nothing typed there is private or backed up (entries stay in the visitor's own browser).
 

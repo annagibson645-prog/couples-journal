@@ -25,7 +25,7 @@ function setup({ ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) Ap
     getElementById: (id) => { const hit = (withBody ? body : { find: () => [] }).find((n) => n.id === id); return hit[0] || null; },
     addEventListener(t, f) { (this.listeners[t] = this.listeners[t] || []).push(f); } };
   const timers = [];
-  const win = { navigator: { userAgent: ua }, listeners: {}, location: { reloads: 0, reload() { this.reloads++; } }, __journalStarted: started || undefined,
+  const win = { navigator: { userAgent: ua }, listeners: {}, location: { origin: 'https://x.test', reloads: 0, reload() { this.reloads++; } }, __journalStarted: started || undefined,
     addEventListener(t, f) { (this.listeners[t] = this.listeners[t] || []).push(f); },
     setTimeout: (f, ms) => { timers.push({ f, ms, kind: 'timeout' }); return timers.length; },
     setInterval: (f, ms) => { timers.push({ f, ms, kind: 'interval' }); return timers.length; },
@@ -52,7 +52,7 @@ test('formatTech joins the message and the user agent and never exceeds 200 char
 
 test('an error before the app has started shows the message, a Reload button and the grey technical line', () => {
   const s = setup();
-  s.fire('error', { message: 'Can\'t find variable: structuredClone' });
+  s.fire('error', { message: 'Can\'t find variable: structuredClone', filename: 'https://x.test/js/lib/a.js' });
   const b = box(s);
   assert.ok(b, 'message is shown');
   assert.equal(b.attrs.role, 'alert');
@@ -67,37 +67,76 @@ test('an error before the app has started shows the message, a Reload button and
   assert.equal(b.find((n) => n.className === 'boot-tech').length, 1);
 });
 
-test('an unhandled promise rejection before start shows the message too', () => {
+test('an unhandled promise rejection waits until a second after load, then shows the message', () => {
   const s = setup();
   s.fire('unhandledrejection', { reason: new Error('nope') });
+  assert.equal(box(s), null, 'not yet');
+  s.fire('load', {});
+  const wait = s.timers.filter((t) => t.kind === 'timeout' && t.ms === 1000);
+  assert.equal(wait.length, 1);
+  wait[0].f();
   assert.match(box(s).find((n) => n.className === 'boot-tech')[0].textContent, /^nope \| /);
 });
 
-test('a script that fails to load is reported; a failed font or image is not', () => {
+test('a deferred error is cleared if the app starts within that second', () => {
+  const s = setup();
+  s.fire('error', { message: 'Script error.' });
+  s.fire('load', {});
+  s.win.__journalStarted = true;
+  s.timers.find((t) => t.ms === 1000).f();
+  assert.equal(box(s), null);
+});
+
+test('if the page is already loaded, the one-second wait starts immediately', () => {
+  const s = setup();
+  s.doc.readyState = 'complete';
+  s.fire('error', { message: 'x' });
+  assert.equal(s.timers.filter((t) => t.ms === 1000).length, 1);
+});
+
+test('errors from another origin (extensions, in-app injected scripts) are ignored', () => {
+  const s = setup();
+  s.fire('error', { message: "Can't find variable: _AutofillCallbackHandler", filename: 'https://other.example/inject.js' });
+  s.fire('load', {});
+  assert.equal(s.timers.filter((t) => t.ms === 1000).length, 0);
+  assert.equal(box(s), null);
+  s.fire('error', { target: { tagName: 'SCRIPT', src: 'https://cdn.other.example/x.js' } });
+  assert.equal(box(s), null);
+});
+
+test('a syntax or runtime error in the page own script is shown at once', () => {
+  const s = setup();
+  s.fire('error', { message: 'Unexpected token', filename: 'https://x.test/js/screens/today.js' });
+  assert.ok(box(s));
+});
+
+test('a failed own script is reported without naming js/app.js; a failed font or image is not', () => {
   const s = setup();
   s.fire('error', { target: { tagName: 'LINK' } });
   assert.equal(box(s), null);
-  s.fire('error', { target: { tagName: 'SCRIPT', src: 'https://x.test/js/app.js' } });
-  assert.match(box(s).find((n) => n.className === 'boot-tech')[0].textContent, /^Could not load https:\/\/x\.test\/js\/app\.js \| /);
+  s.fire('error', { target: { tagName: 'SCRIPT', src: 'https://x.test/js/lib/days.js' } });
+  const tech = box(s).find((n) => n.className === 'boot-tech')[0].textContent;
+  assert.match(tech, /^Could not load the app \(a script failed\): \/js\/lib\/days\.js \| /);
+  assert.doesNotMatch(tech, /app\.js/);
 });
 
 test('once the app has started, later errors show nothing', () => {
   const s = setup({ started: true });
-  s.fire('error', { message: 'late' });
+  s.fire('error', { message: 'late', filename: 'https://x.test/a.js' });
   s.fire('unhandledrejection', { reason: 'late' });
   assert.equal(box(s), null);
 });
 
 test('only one message is ever shown', () => {
   const s = setup();
-  s.fire('error', { message: 'a' });
-  s.fire('error', { message: 'b' });
+  s.fire('error', { message: 'a', filename: 'https://x.test/a.js' });
+  s.fire('error', { message: 'b', filename: 'https://x.test/b.js' });
   assert.equal(s.body.children.length, 1);
 });
 
 test('when the app starts after an early error, the message goes away', () => {
   const s = setup();
-  s.fire('error', { message: 'injected by an in-app browser' });
+  s.fire('error', { message: 'injected by an in-app browser', filename: 'https://x.test/a.js' });
   assert.ok(box(s));
   s.win.__journalStarted = true;
   s.timers.find((t) => t.kind === 'interval').f();
@@ -148,4 +187,10 @@ test('index.html: noscript message, guard before the module script, nomodule pre
   assert.match(html, /html\[data-theme="light"\] #boot-error/);
   assert.match(html, /#boot-error button\{[^}]*min-height:44px/);
   assert.match(html, /#boot-error \.boot-tech\{[^}]*word-break:break-all/);
+});
+
+test('index.html: the theme button text is set for the saved theme before JS, and the banner is in the HTML (no jump)', () => {
+  assert.match(html, /id="theme-toggle"[^>]*>Light mode<\/button>\s*<script>[^<]*dataset\.theme==='light'[^<]*Dark mode/);
+  assert.match(html, /<div id="sample-banner" class="banner" role="note">/);
+  assert.doesNotMatch(guardSrc, /timers/);
 });

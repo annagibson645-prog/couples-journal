@@ -22,7 +22,7 @@
   <script id="boot-guard">
   /* Classic script (runs on any browser). If the app has not started and something fails, show a message instead of a blank page. */
   (function () {
-    var w = window, d = document, timers = [];
+    var w = window, d = document;
     function formatTech(msg) {
       var m = String(msg == null || msg === '' ? 'unknown error' : msg).replace(/\s+/g, ' ');
       var ua = '';
@@ -53,18 +53,39 @@
       if (w.__journalStarted) return;
       show('Something went wrong loading the journal.', msg, true);
     }
+    /* Same origin as this page? Extensions and in-app browsers inject scripts from elsewhere; their errors are not ours. */
+    function own(url) {
+      try { return !url || url.indexOf(w.location.origin) === 0; } catch (e) { return true; }
+    }
+    /* An error with no usable filename may be injected code, so wait until a second after load; the app starting clears it. */
+    var pending = null, armed = false;
+    function later(msg) {
+      pending = msg;
+      if (armed) return;
+      armed = true;
+      function arm() { w.setTimeout(function () { failed(pending); }, 1000); }
+      if (d.readyState === 'complete') arm(); else w.addEventListener('load', arm);
+    }
     function onError(e) {
       var t = e && e.target;
       if (t && t !== w && t.tagName) {
-        if (t.tagName === 'SCRIPT') failed('Could not load ' + (t.src || 'a script'));
-        return; /* fonts, images and the like are not fatal */
+        /* Only the page's own scripts matter; fonts, images and third-party scripts are not fatal. */
+        if (t.tagName === 'SCRIPT' && own(t.src)) {
+          var path = '';
+          try { path = ': ' + String(t.src).replace(w.location.origin, ''); } catch (x) { path = ''; }
+          failed('Could not load the app (a script failed)' + path);
+        }
+        return;
       }
-      failed((e && (e.message || (e.error && e.error.message))) || 'unknown error');
+      var msg = (e && (e.message || (e.error && e.error.message))) || 'unknown error';
+      var file = e && e.filename;
+      if (file && !own(file)) return;
+      if (file) failed(msg); else later(msg);
     }
     w.addEventListener('error', onError, true);
     w.addEventListener('unhandledrejection', function (e) {
       var r = e && e.reason;
-      failed((r && r.message) || (r == null ? 'unhandled rejection' : String(r)));
+      later((r && r.message) || (r == null ? 'unhandled rejection' : String(r)));
     });
     /* Quiet note only if loading is slow; gone as soon as the app starts. A late start also clears an early false alarm. */
     var tick = w.setInterval(function () {
@@ -103,6 +124,7 @@
   <link rel="modulepreload" href="js/lib/docx.js">
   <link rel="modulepreload" href="js/lib/escape.js">
   <link rel="modulepreload" href="js/lib/exportmodel.js">
+  <link rel="modulepreload" href="js/lib/fatal.js">
   <link rel="modulepreload" href="js/lib/formats.js">
   <link rel="modulepreload" href="js/lib/lookback.js">
   <link rel="modulepreload" href="js/lib/moodlogic.js">
@@ -121,12 +143,12 @@
   <link rel="modulepreload" href="js/screens/signin.js">
   <link rel="modulepreload" href="js/screens/today.js">
   <!-- modulepreload:end -->
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/boot.js"></script>
 </head>
 <body>
   <noscript><p style="margin:0;padding:14px 16px;font:400 16px/1.45 -apple-system,Roboto,Georgia,serif;background:#fff1cc;color:#3a2300;border-bottom:2px solid #d97706">This journal needs JavaScript. Please turn it on in your browser settings and reload the page.</p></noscript>
   <header class="topbar">
-    <div id="sample-banner" class="banner" role="note" hidden>
+    <div id="sample-banner" class="banner" role="note">
       <span class="banner-text">Sample mode — entries stay on this device only and aren't private or backed up</span>
       <span class="banner-actions">
         <button id="sample-reset" class="banner-btn" type="button">Reset sample data</button>
@@ -139,6 +161,7 @@
       </span>
     </div>
     <button id="theme-toggle" type="button">Light mode</button>
+    <script>/* before JS: make the button say the right thing for the saved theme */try{if(document.documentElement.dataset.theme==='light'){var b=document.getElementById('theme-toggle');b.textContent='Dark mode';b.setAttribute('aria-label','Switch to dark mode');}}catch(e){}</script>
   </header>
   <main class="screen" id="screen-front">
     <div class="stage">
