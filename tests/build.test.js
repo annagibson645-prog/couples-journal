@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildCss, buildIndex, sigilD } from '../scripts/build.mjs';
+import { buildBoot, buildCss, buildIndex, sigilD } from '../scripts/build.mjs';
 import { importGraph } from '../scripts/import-graph.mjs';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
@@ -64,4 +64,26 @@ test('head sets background and text colour for both themes before any stylesheet
   assert.match(head, /html\{background:#0e0d14;color:#eae6f5/);
   assert.match(head, /html\[data-theme="light"\]\{background:#f0ead8;color:#2c1f0e/);
   assert.ok(head.indexOf("localStorage.getItem('journal-theme')") < head.indexOf('html{background'), 'theme is applied before the style');
+});
+
+test('js/boot.js is up to date, flat, lists every module once with app.js last', () => {
+  assert.equal(read('js/boot.js'), buildBoot());
+  const imports = [...read('js/boot.js').matchAll(/^import '(\.\/[^']+)';$/gm)].map((m) => `js/${m[1].slice(2)}`);
+  const { files } = importGraph('js/app.js');
+  assert.equal(imports.at(-1), 'js/app.js');
+  assert.deepEqual([...imports].sort(), files, 'exactly the modules the app imports, each once');
+  assert.equal(new Set(imports).size, imports.length);
+  assert.ok(!imports.includes('js/boot.js'));
+});
+
+test('from js/boot.js every module is at most 2 levels deep for the browser (old iOS has no modulepreload)', () => {
+  const g = importGraph('js/boot.js');
+  assert.ok(g.depth <= 2, `depth ${g.depth}`);
+  assert.equal(g.files.length, importGraph('js/app.js').files.length + 1);
+});
+
+test('index.html loads js/boot.js as the only module script, after the guard', () => {
+  const html = read('index.html');
+  const scripts = [...html.matchAll(/<script type="module" src="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(scripts, ['js/boot.js']);
 });

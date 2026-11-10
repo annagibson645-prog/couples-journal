@@ -6,24 +6,41 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const IMPORT_RE = /(?:^|\n)\s*(?:import|export)\s[^'"]*?from\s*['"](\.[^'"]+)['"]|(?:^|\n)\s*import\s*['"](\.[^'"]+)['"]/g;
 
-// Returns { files: sorted root-relative paths with forward slashes, depth: number of sequential fetch levels }.
+// Returns { files, depth, longest }.
+//  files:   sorted root-relative paths (forward slashes)
+//  depth:   network levels a browser needs: a module is fetched as soon as ANY importer is parsed, so this is the
+//           longest of the SHORTEST paths from the entry (breadth-first level). 1 = only the entry file.
+//  longest: longest dependency chain (matters for evaluation order and for engines that do not overlap fetches).
 export function importGraph(entry = 'js/app.js') {
-  const depthOf = new Map();
-  const queue = [[resolve(ROOT, entry), 1]];
-  while (queue.length) {
-    const [file, d] = queue.shift();
-    if (depthOf.has(file) && depthOf.get(file) >= d) continue;
-    depthOf.set(file, d);
-    const src = readFileSync(file, 'utf8');
-    for (const m of src.matchAll(IMPORT_RE)) {
-      queue.push([resolve(dirname(file), m[1] || m[2]), d + 1]);
+  const level = new Map(); // file -> first (shortest) level
+  const edges = new Map();
+  let frontier = [resolve(ROOT, entry)];
+  for (let d = 1; frontier.length; d++) {
+    const next = [];
+    for (const file of frontier) {
+      if (level.has(file)) continue;
+      level.set(file, d);
+      const deps = [...readFileSync(file, 'utf8').matchAll(IMPORT_RE)].map((m) => resolve(dirname(file), m[1] || m[2]));
+      edges.set(file, deps);
+      next.push(...deps);
     }
+    frontier = next;
   }
-  const files = [...depthOf.keys()].map((f) => relative(ROOT, f).split(sep).join('/')).sort();
-  return { files, depth: Math.max(...depthOf.values()) };
+  const memo = new Map();
+  const chain = (f, seen = new Set()) => {
+    if (memo.has(f)) return memo.get(f);
+    if (seen.has(f)) return 0; // cycle guard
+    seen.add(f);
+    const n = 1 + Math.max(0, ...(edges.get(f) || []).map((x) => chain(x, seen)));
+    seen.delete(f);
+    memo.set(f, n);
+    return n;
+  };
+  const files = [...level.keys()].map((f) => relative(ROOT, f).split(sep).join('/')).sort();
+  return { files, depth: Math.max(...level.values()), longest: chain(resolve(ROOT, entry)) };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const g = importGraph();
-  console.log(JSON.stringify({ count: g.files.length, depth: g.depth }), '\n' + g.files.join('\n'));
+  console.log(JSON.stringify({ count: g.files.length, depth: g.depth, longest: g.longest }), '\n' + g.files.join('\n'));
 }
