@@ -147,6 +147,15 @@ test('hover never reveals a control: :hover rules only restyle', () => {
   }
 });
 
+test('every :hover rule is inside @media (hover: hover) (reduced-motion resets excepted)', () => {
+  for (const f of cssSources) {
+    const src = stripCss(read(f)).split(String.fromCharCode(10)).filter((l) => !/prefers-reduced-motion/.test(l)).join(String.fromCharCode(10));
+    for (const line of src.split(String.fromCharCode(10))) {
+      if (/:hover/.test(line)) assert.match(line, /@media \(hover: hover\)/, `${f}: ${line.trim()}`);
+    }
+  }
+});
+
 test('banner: the confirm state is a class on the banner (replaces :has)', () => {
   const doc = makeBannerDom();
   createBanner({ document: doc, onReset: async () => {} });

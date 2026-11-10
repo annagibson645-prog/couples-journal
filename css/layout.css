@@ -20,7 +20,8 @@ button { -webkit-appearance: none; appearance: none; }
 @media (hover: hover) { .col:hover { background: rgba(var(--accrgb), .08); } }
 .col:focus-visible { outline-offset: -4px; background: rgba(var(--accrgb), .08); }
 .col .rule { margin-top: 16px; width: 26px; height: 1px; background: var(--acc); opacity: .7; transition: width .5s; }
-.col:hover .rule, .col:focus-visible .rule { width: 64px; }
+.col:focus-visible .rule { width: 64px; }
+@media (hover: hover) { .col:hover .rule { width: 64px; } }
 
 .kicker { margin-top: 34px; font: 400 10px 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; letter-spacing: .34em;
   text-transform: uppercase; color: var(--acc); text-align: center; }

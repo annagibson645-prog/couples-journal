@@ -21,7 +21,7 @@
 .sv-adv summary { display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; list-style: none;
   font: italic 400 17px 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--muted); text-decoration: underline; text-underline-offset: 4px; }
 .sv-adv summary::-webkit-details-marker { display: none; }
-.sv-adv summary:hover { color: var(--acc); }
+@media (hover: hover) { .sv-adv summary:hover { color: var(--acc); } }
 .sv-adv .sv-desc { max-width: 60ch; }
 
 @media (max-width: 760px) {

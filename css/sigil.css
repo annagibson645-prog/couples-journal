@@ -14,9 +14,12 @@
 .rt { animation: ccw 70s linear infinite; }
 .rd { animation: cw 40s linear infinite; }
 .rp { animation: ccw 95s linear infinite; }
-.col:hover .ro, .col:focus-visible .ro { animation-duration: 26s; }
-.col:hover .rt, .col:focus-visible .rt { animation-duration: 16s; }
-.col:hover .rd, .col:focus-visible .rd { animation-duration: 10s; }
+.col:focus-visible .ro { animation-duration: 26s; }
+@media (hover: hover) { .col:hover .ro { animation-duration: 26s; } }
+.col:focus-visible .rt { animation-duration: 16s; }
+@media (hover: hover) { .col:hover .rt { animation-duration: 16s; } }
+.col:focus-visible .rd { animation-duration: 10s; }
+@media (hover: hover) { .col:hover .rd { animation-duration: 10s; } }
 
 .glow { position: absolute; top: 42%; left: 50%; width: 130%; aspect-ratio: 1; border-radius: 50%;
   transform: translate(-50%, -50%); pointer-events: none;

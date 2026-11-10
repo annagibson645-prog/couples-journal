@@ -45,7 +45,8 @@ button { -webkit-appearance: none; appearance: none; }
 @media (hover: hover) { .col:hover { background: rgba(var(--accrgb), .08); } }
 .col:focus-visible { outline-offset: -4px; background: rgba(var(--accrgb), .08); }
 .col .rule { margin-top: 16px; width: 26px; height: 1px; background: var(--acc); opacity: .7; transition: width .5s; }
-.col:hover .rule, .col:focus-visible .rule { width: 64px; }
+.col:focus-visible .rule { width: 64px; }
+@media (hover: hover) { .col:hover .rule { width: 64px; } }
 
 .kicker { margin-top: 34px; font: 400 10px 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; letter-spacing: .34em;
   text-transform: uppercase; color: var(--acc); text-align: center; }
@@ -107,9 +108,12 @@ button { -webkit-appearance: none; appearance: none; }
 .rt { animation: ccw 70s linear infinite; }
 .rd { animation: cw 40s linear infinite; }
 .rp { animation: ccw 95s linear infinite; }
-.col:hover .ro, .col:focus-visible .ro { animation-duration: 26s; }
-.col:hover .rt, .col:focus-visible .rt { animation-duration: 16s; }
-.col:hover .rd, .col:focus-visible .rd { animation-duration: 10s; }
+.col:focus-visible .ro { animation-duration: 26s; }
+@media (hover: hover) { .col:hover .ro { animation-duration: 26s; } }
+.col:focus-visible .rt { animation-duration: 16s; }
+@media (hover: hover) { .col:hover .rt { animation-duration: 16s; } }
+.col:focus-visible .rd { animation-duration: 10s; }
+@media (hover: hover) { .col:hover .rd { animation-duration: 10s; } }
 
 .glow { position: absolute; top: 42%; left: 50%; width: 130%; aspect-ratio: 1; border-radius: 50%;
   transform: translate(-50%, -50%); pointer-events: none;
@@ -360,7 +364,7 @@ button { -webkit-appearance: none; appearance: none; }
 .sv-adv summary { display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; list-style: none;
   font: italic 400 17px 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--muted); text-decoration: underline; text-underline-offset: 4px; }
 .sv-adv summary::-webkit-details-marker { display: none; }
-.sv-adv summary:hover { color: var(--acc); }
+@media (hover: hover) { .sv-adv summary:hover { color: var(--acc); } }
 .sv-adv .sv-desc { max-width: 60ch; }
 
 @media (max-width: 760px) {
