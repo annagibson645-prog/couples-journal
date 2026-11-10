@@ -13,3 +13,5 @@ No real journal text is ever committed to this repository.
 ## Build step
 
 Edit the files in `css/` and `js/` as usual, then run `node scripts/build.mjs`. It rewrites `css/app.css` (the one stylesheet the page loads), the sigil paths and the `modulepreload` list in `index.html`. `npm test` fails if any of them are out of date.
+
+Speed on phones: the page loads one stylesheet and `js/boot.js`, which lists every module so all of them download in parallel on every browser (older iOS has no `modulepreload`; Chrome/Android and iOS 17+ also get the `modulepreload` hints). That is about 2-3 round trips after the HTML on all of them. Transfer time is not included in that count.
