@@ -51,6 +51,7 @@ export function createSendSheet({ data, document: docDep, doc: docAlt, getViewer
   const area = el('textarea', 'sd-area');
   area.id = 'sd-area';
   area.setAttribute('spellcheck', 'true');
+  area.setAttribute('autocomplete', 'off');
   area.setAttribute('aria-describedby', 'sd-count sd-limit');
   const meta = el('div', 'sd-meta');
   const count = el('span', 'sd-count');
@@ -136,7 +137,11 @@ export function createSendSheet({ data, document: docDep, doc: docAlt, getViewer
     if (vv) { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); }
     const back = trigger;
     trigger = null;
-    if (giveBack && back) back.focus();
+    if (!giveBack) return;
+    if (back && back.isConnected !== false) { back.focus(); return; }
+    // The entry list redrew and the opener is gone: land on the screen's heading, not on <body>.
+    const heading = doc.querySelector ? doc.querySelector('main:not([hidden]) h1') : null;
+    if (heading) heading.focus();
   }
 
   function open(entryText, triggerEl, selectedText) {
@@ -164,7 +169,10 @@ export function createSendSheet({ data, document: docDep, doc: docAlt, getViewer
   }
 
   function close() {
-    if (isOpen) hide(true);
+    if (!isOpen) return;
+    hide(true);
+    area.value = ''; // cancelled words do not linger in the hidden page
+    refresh();
   }
 
   // Wipe the words (sign-out, leaving a screen, switching viewer). Focus is not moved: the screen is going away.

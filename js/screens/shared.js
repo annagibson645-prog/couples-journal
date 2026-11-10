@@ -45,19 +45,26 @@ export function collapsibleText(doc, id, text, expanded) {
 }
 
 // The "Send to him / Send to her" button under an entry. Pressing it opens the shared send dialog
-// with the entry's words, or only the words the person had selected inside this entry. A phone can
-// clear the selection as the finger lands, before the click, so it is also read when the press begins.
-export function entrySendButton(doc, { sheet, door, textEl, text, when }) {
+// with the entry's words, or only the words the person had selected inside this entry (`entryEl` is the
+// whole entry, so a selection that strays a little past the text is clipped to it). A phone can clear
+// the selection as the finger lands, before the click, so it is also read when the press begins. On
+// touch the order is pointerdown, pointerup, pointerout, pointerleave, mouse events, click: nothing in
+// between may erase the capture. It is dropped at the next press, on cancel, and after 1.5 s.
+const CAPTURE_MS = 1500;
+export function entrySendButton(doc, { sheet, door, textEl, entryEl = textEl, text, when }) {
   const label = sendLabel(door);
   const b = makeEl(doc)('button', 'td-send', label);
   b.type = 'button';
   b.setAttribute('aria-label', `${label}: entry from ${when}`);
   let captured = '';
-  const grab = () => { const t = selectedTextIn(doc, textEl); if (t) captured = t; }; // an empty read never erases a good one
-  for (const ev of ['pointerdown', 'mousedown', 'touchstart']) b.addEventListener(ev, grab);
-  for (const ev of ['pointercancel', 'pointerleave', 'touchcancel']) b.addEventListener(ev, () => { captured = ''; });
+  let at = 0;
+  const grab = () => { const t = selectedTextIn(doc, textEl, entryEl); if (t) { captured = t; at = Date.now(); } }; // an empty read never erases a good one
+  b.addEventListener('pointerdown', () => { captured = ''; grab(); }); // a new press starts afresh
+  for (const ev of ['mousedown', 'touchstart']) b.addEventListener(ev, grab);
+  for (const ev of ['pointercancel', 'touchcancel']) b.addEventListener(ev, () => { captured = ''; });
   b.addEventListener('click', () => {
-    const picked = captured || selectedTextIn(doc, textEl);
+    const fresh = captured && Date.now() - at <= CAPTURE_MS ? captured : '';
+    const picked = fresh || selectedTextIn(doc, textEl, entryEl);
     captured = '';
     sheet.open(text, b, picked);
   });

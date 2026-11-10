@@ -243,7 +243,8 @@ test('without a sheet there is no send button (older callers are unchanged)', as
   assert.equal(sendBtn($('td-list').children[0]), undefined);
 });
 
-test('a selection inside the entry text starts the sheet with only the selection, even if pressing the button cleared it', async () => {
+// A text node and a li for the fake selection; Today passes the li as the entry scope.
+async function selectionSetup() {
   const sheet = sheetStub();
   const s = setup({ entries: [entry('a', 'one two three')] });
   const t = createToday({ data: s.data, document: s.doc, now: () => new Date(2026, 10, 5, 10, 0), debounceMs: 5, showScreen() {}, sheet });
@@ -251,23 +252,54 @@ test('a selection inside the entry text starts the sheet with only the selection
   const li = s.$('td-list').children[0];
   const p = li.byClass('td-text')[0];
   p.contains = (n) => n === p;
-  let picked = 'two';
-  s.doc.getSelection = () => (picked ? { rangeCount: 1, isCollapsed: false, anchorNode: p, focusNode: p, toString: () => picked } : { rangeCount: 0, isCollapsed: true });
-  const b = sendBtn(li);
-  b.dispatch('pointerdown'); // the phone clears the selection before the click
-  picked = '';
+  li.contains = (n) => n === li || n === p;
+  const state = { picked: 'two' };
+  s.doc.getSelection = () => (state.picked
+    ? { rangeCount: 1, isCollapsed: false, getRangeAt: () => ({ startContainer: p, endContainer: p, intersectsNode: () => true }), toString: () => state.picked }
+    : { rangeCount: 0, isCollapsed: true });
+  return { sheet, b: sendBtn(li), state };
+}
+const realNow = Date.now;
+
+test('TOUCH event order: a selection the tap cleared is still used', async () => {
+  const { sheet, b, state } = await selectionSetup();
+  b.dispatch('pointerdown'); // phone: selection is read here...
+  state.picked = '';          // ...then the tap clears it
+  for (const ev of ['touchstart', 'pointerup', 'pointerout', 'pointerleave', 'mousedown', 'mouseup']) b.dispatch(ev);
   b.click();
   assert.equal(sheet.calls.open[0][2], 'two');
-  // a later plain click (keyboard) with no selection sends the whole entry; the old capture is gone
-  b.click();
-  assert.equal(sheet.calls.open[1][2], '');
-  // touchstart and mousedown both capture, and the empty second one does not erase the first
-  picked = 'three';
-  b.dispatch('touchstart');
-  picked = '';
+});
+
+test('MOUSE order: the selection is used, and a later plain click opens with the whole entry', async () => {
+  const { sheet, b, state } = await selectionSetup();
   b.dispatch('mousedown');
   b.click();
-  assert.equal(sheet.calls.open[2][2], 'three');
+  assert.equal(sheet.calls.open[0][2], 'two');
+  state.picked = '';
+  b.click();
+  assert.equal(sheet.calls.open[1][2], '');
+});
+
+test('a stale capture does not survive the next press, and expires after about 1.5 seconds', async () => {
+  const { sheet, b, state } = await selectionSetup();
+  b.dispatch('pointerdown'); // captured 'two', never clicked (finger slid away)
+  state.picked = '';
+  b.dispatch('pointerdown'); // next press with no selection: the old capture is gone
+  b.click();
+  assert.equal(sheet.calls.open[0][2], '');
+  state.picked = 'two';
+  let t = 1000; Date.now = () => t;
+  try {
+    b.dispatch('pointerdown');
+    state.picked = '';
+    t += 2000; // too slow to be the same tap
+    b.click();
+    assert.equal(sheet.calls.open[1][2], '');
+    state.picked = 'two';
+    b.dispatch('pointerdown'); state.picked = ''; t += 500;
+    b.click();
+    assert.equal(sheet.calls.open[2][2], 'two');
+  } finally { Date.now = realNow; }
 });
 
 test('show and clear wipe the sheet, and the entry text is unchanged by sending', async () => {

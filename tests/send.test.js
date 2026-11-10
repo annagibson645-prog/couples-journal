@@ -56,17 +56,40 @@ test('formatCount puts thousands separators in', () => {
   assert.equal(formatCount(1234567), '1,234,567');
 });
 
-test('selectedTextIn returns the selection only when it sits inside the node', () => {
-  const inside = { id: 'in' };
-  const outside = { id: 'out' };
-  const node = { contains: (n) => n === inside };
-  const doc = (sel) => ({ getSelection: () => sel });
-  const sel = (anchor, focus, text, collapsed = false) => ({ rangeCount: 1, isCollapsed: collapsed, anchorNode: anchor, focusNode: focus, toString: () => text });
-  assert.equal(selectedTextIn(doc(sel(inside, inside, 'tea')), node), 'tea');
-  assert.equal(selectedTextIn(doc(sel(inside, outside, 'tea and more')), node), '');
-  assert.equal(selectedTextIn(doc(sel(outside, outside, 'x')), node), '');
-  assert.equal(selectedTextIn(doc(sel(inside, inside, '', true)), node), '');
-  assert.equal(selectedTextIn(doc({ rangeCount: 0 }), node), '');
-  assert.equal(selectedTextIn({}, node), '');
-  assert.equal(selectedTextIn(doc(null), node), '');
+// A tiny range/selection stand-in. Nodes are { id, kids: [...] } and `contains` follows the tree.
+const mk = (id, kids = []) => { const n = { id, kids, contains(x) { return x === n || kids.some((k) => k.contains && k.contains(x)); }, childNodes: { length: 1 } }; return n; };
+function sel(start, end, text, { intersects = true, collapsed = false } = {}) {
+  const range = {
+    startContainer: start, endContainer: end, intersectsNode: () => intersects,
+    cloneRange() { const c = { ...range, calls: [], setStart(n, o) { c.startContainer = n; c.calls.push(['s', n, o]); }, setEnd(n, o) { c.endContainer = n; c.calls.push(['e', n, o]); }, toString: () => c.clipped }; c.clipped = text; return c; },
+  };
+  return { rangeCount: 1, isCollapsed: collapsed, getRangeAt: () => range, toString: () => text };
+}
+const docWith = (s) => ({ getSelection: () => s });
+
+test('selectedTextIn returns the selection when it sits inside the node', () => {
+  const t = mk('t'); const entry = mk('entry', [t]);
+  assert.equal(selectedTextIn(docWith(sel(t, t, 'tea')), t, entry), 'tea');
+  assert.equal(selectedTextIn(docWith(sel(t, t, '', { collapsed: true })), t), '');
+  assert.equal(selectedTextIn(docWith({ rangeCount: 0 }), t), '');
+  assert.equal(selectedTextIn({}, t), '');
+  assert.equal(selectedTextIn(docWith(null), t), '');
+});
+
+test('a selection that runs slightly past the entry text is clipped to the entry text', () => {
+  const t = mk('t'); const when = mk('when'); const entry = mk('entry', [when, t]);
+  // starts in the date line, ends inside the text: clipped to start at the text
+  const s1 = sel(when, t, 'clipped words');
+  assert.equal(selectedTextIn(docWith(s1), t, entry), 'clipped words');
+  // ends past the text (in the buttons): clipped at the end of the text
+  const actions = mk('actions'); entry.kids.push(actions);
+  assert.equal(selectedTextIn(docWith(sel(t, actions, 'tail')), t, entry), 'tail');
+});
+
+test('a selection entirely outside the text, or reaching another entry, gives nothing (whole entry is used)', () => {
+  const t = mk('t'); const entry = mk('entry', [t]); const other = mk('other', [mk('t2')]);
+  const actions = mk('actions'); entry.kids.push(actions);
+  assert.equal(selectedTextIn(docWith(sel(actions, actions, 'Delete', { intersects: false })), t, entry), '');
+  assert.equal(selectedTextIn(docWith(sel(t, other.kids[0], 'two entries')), t, entry), '');
+  assert.equal(selectedTextIn(docWith(sel(other.kids[0], other.kids[0], 'elsewhere')), t, entry), '');
 });

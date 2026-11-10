@@ -34,14 +34,24 @@ export function formatCount(n) {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-// The text the person has selected, if (and only if) the selection sits inside `node`.
+// The text the person has selected inside `node` (an entry's text). `scope` is the whole entry
+// (date line, text, buttons). A selection that runs a little past the text but stays inside the same
+// entry is clipped to the text; one that is outside the text, or reaches another entry, gives ''.
 // Never throws: no selection support just means ''.
-export function selectedTextIn(doc, node) {
+export function selectedTextIn(doc, node, scope = node) {
   try {
     const sel = doc && typeof doc.getSelection === 'function' ? doc.getSelection() : null;
     if (!sel || !sel.rangeCount || sel.isCollapsed) return '';
-    if (!node.contains(sel.anchorNode) || !node.contains(sel.focusNode)) return '';
-    return String(sel);
+    const range = sel.getRangeAt(0);
+    const a = range.startContainer;
+    const b = range.endContainer;
+    if (!scope.contains(a) || !scope.contains(b)) return '';
+    if (node.contains(a) && node.contains(b)) return String(sel);
+    if (!range.intersectsNode(node)) return '';
+    const r = range.cloneRange();
+    if (!node.contains(a)) r.setStart(node, 0);
+    if (!node.contains(b)) r.setEnd(node, node.childNodes.length);
+    return String(r);
   } catch (e) {
     return '';
   }

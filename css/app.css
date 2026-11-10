@@ -273,12 +273,14 @@ html.sd-lock { overflow: hidden; }
   border: 1px solid var(--line); background: transparent; color: var(--fg); font: 400 18px/1.55 'Newsreader', Georgia, 'Times New Roman', serif;
   resize: vertical; overflow-y: auto; }
 .sd-area:focus { outline: 2px solid var(--acc); outline-offset: 2px; }
-.sd-meta { margin-top: 8px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2px 16px; font: italic 400 15px 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--muted); }
+.sd-meta { margin-top: 8px; display: flex; justify-content: space-between; flex-wrap: wrap; font: italic 400 15px 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--muted); }
+.sd-meta > :first-child { margin-right: 16px; } /* margins, not flex gap: gap needs iOS 14.5 */
 .sd-limit { margin: 8px 0 0; font: italic 400 16px/1.4 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--fg); }
 .sd-limit:empty { display: none; }
 .sd-error { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--acc); font: italic 400 16px/1.45 'Newsreader', Georgia, 'Times New Roman', serif;
   color: var(--fg); overflow-wrap: break-word; overflow-wrap: anywhere; }
-.sd-buttons { margin-top: 18px; display: flex; gap: 12px; justify-content: flex-end; }
+.sd-buttons { margin-top: 18px; display: flex; justify-content: flex-end; }
+.sd-buttons > * + * { margin-left: 12px; }
 .sd-cancel { min-height: 48px; padding: 10px 24px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--fg);
   font: italic 400 18px 'Newsreader', Georgia, 'Times New Roman', serif; cursor: pointer; }
 @media (hover: hover) { .sd-cancel:hover { background: rgba(127,127,127,.16); } }
@@ -302,13 +304,17 @@ html.sd-lock { overflow: hidden; }
   .td-scale { max-width: 360px; }
   .td-word { font-size: 24px; }
   .td-text { font-size: 18px; }
-  /* The dialog becomes a bottom sheet: full width, never wider than the screen, scrolls inside itself above the keyboard. */
+  /* The dialog becomes a bottom sheet: full width, never wider than the screen. max-height is 100% of the scrim, which
+     send-sheet.js shrinks to the visible area, so with the keyboard up the sheet scrolls inside itself. */
   .sd-scrim { align-items: flex-end; padding: 0; }
-  .sd-dialog { max-width: none; max-height: 92vh; max-height: 92dvh; border-width: 1px 0 0; border-radius: 20px 20px 0 0; padding: 20px 16px 16px;
+  .sd-dialog { max-width: none; max-height: 100%; border-width: 1px 0 0; border-radius: 20px 20px 0 0; padding: 20px 16px 16px;
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -12px 40px rgba(0, 0, 0, .4); animation: sd-up .22s ease-out; }
   .sd-title { font-size: 28px; }
   .sd-area { height: 30vh; height: 30dvh; min-height: 120px; font-size: 16px; }
-  .sd-buttons { flex-direction: column-reverse; gap: 10px; }
+  .sd-buttons { flex-direction: column-reverse; }
+  .sd-buttons > * + * { margin: 0 0 10px; }
+  /* The buttons stay in view while the rest of the sheet scrolls. */
+  .sd-buttons { position: -webkit-sticky; position: sticky; bottom: -16px; margin-bottom: -16px; padding: 10px 0 16px; background: var(--sheet); }
   .sd-cancel, .sd-send { width: 100%; min-height: 48px; justify-content: center; text-align: center; }
 }
 @keyframes sd-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }

@@ -200,7 +200,7 @@ export function createToday({ data, showScreen, rail = { show() {} }, sheet = nu
         actions.append(yes, keep);
         if (focus && focus.id === entry.id && focus.kind === 'yes') toFocus = yes;
       } else {
-        if (sheet) actions.appendChild(entrySendButton(doc, { sheet, door: who, textEl: text.p, text: entry.text, when: entryWhen(entry, today) }));
+        if (sheet) actions.appendChild(entrySendButton(doc, { sheet, door: who, textEl: text.p, entryEl: li, text: entry.text, when: entryWhen(entry, today) }));
         const del = el('button', 'td-link', 'Delete');
         del.type = 'button';
         del.setAttribute('aria-label', `Delete the entry from ${entryWhen(entry, today)}`);

@@ -135,7 +135,7 @@ export function createLookback({ data, showScreen, rail = { show() {} }, sheet =
       rows.push(text);
       if (sheet) {
         const actions = el('div', 'td-entry-actions');
-        actions.appendChild(entrySendButton(doc, { sheet, door: lastWho, textEl: text.p, text: entry.text, when: entryWhen(entry, t) }));
+        actions.appendChild(entrySendButton(doc, { sheet, door: lastWho, textEl: text.p, entryEl: li, text: entry.text, when: entryWhen(entry, t) }));
         li.appendChild(actions);
       }
       $('lb-day-entries').appendChild(li);

@@ -255,3 +255,30 @@ test('opening twice without closing does not stack inert state', () => {
   assert.equal(s.doc.page[1].getAttribute('inert'), null);
   assert.equal(s.doc.page[1].getAttribute('aria-hidden'), null);
 });
+
+test('closing (Cancel or Escape) empties the textarea so cancelled words do not linger', () => {
+  const s = setup();
+  s.sheet.open(ENTRY, s.trigger);
+  s.cancel.click();
+  assert.equal(s.area.value, '');
+  s.sheet.open(ENTRY, s.trigger);
+  s.key('Escape');
+  assert.equal(s.area.value, '');
+});
+
+test('the textarea has autocomplete off', () => {
+  const s = setup();
+  assert.equal(s.area.getAttribute('autocomplete'), 'off');
+});
+
+test('if the opener is gone when it closes, focus goes to the screen heading, not <body>', () => {
+  const heading = new El(makeSheetDom(), 'h1');
+  const s = setup();
+  heading.doc = s.doc; heading.root = true;
+  s.doc.querySelector = (q) => (q === 'main:not([hidden]) h1' ? heading : null);
+  s.sheet.open(ENTRY, s.trigger);
+  s.doc.body.children = s.doc.body.children.filter((c) => c !== s.trigger);
+  s.trigger.parent = null; // the entry list redrew
+  s.cancel.click();
+  assert.equal(s.doc.activeElement, heading);
+});
