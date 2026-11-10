@@ -7,7 +7,7 @@ import { moodSeries, buildCalendar, isValidScore } from '../lib/moodlogic.js';
 import { moodWord, moonFraction, entryWhen } from '../lib/today.js';
 import { shiftMonth, monthTitle, monthOfDay, tintAlpha, isStrongTint, cellLabel, entriesForDay, entryCounts, formatDayLong } from '../lib/lookback.js';
 import { renderChart } from './chart.js';
-import { makeEl, messageOf, collapsibleText } from './shared.js';
+import { makeEl, messageOf, collapsibleText, entrySendButton } from './shared.js';
 
 const SPAN = 30; // days in the chart, ending today
 const CHOOSE = 'Choose a day to see its mood and what you wrote.';
@@ -15,8 +15,8 @@ const NO_MOODS = 'No moods yet. Choose a moon on Today and it will appear here.'
 const NO_MOODS_BUT_ENTRIES = 'No moods yet. Choose a moon on Today and it will appear here. Days with entries are still open in the calendar.';
 const COULD_NOT_OPEN = "We couldn't open your journal just now. Please try again.";
 
-// deps: { data, showScreen, rail?, onNavigate(name), document?, now? }
-export function createLookback({ data, showScreen, rail = { show() {} }, onNavigate, document: doc = globalThis.document, now = () => new Date() }) {
+// deps: { data, showScreen, rail?, sheet?, onNavigate(name), document?, now? }  (`sheet`: the shared send dialog)
+export function createLookback({ data, showScreen, rail = { show() {} }, sheet = null, onNavigate, document: doc = globalThis.document, now = () => new Date() }) {
   const el = makeEl(doc);
   const $ = (id) => doc.getElementById(id);
   let token = 0;       // bumps on show/clear so late replies are ignored
@@ -133,6 +133,11 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
       const text = collapsibleText(doc, entry.id, entry.text, expanded);
       li.append(text.p, text.more);
       rows.push(text);
+      if (sheet) {
+        const actions = el('div', 'td-entry-actions');
+        actions.appendChild(entrySendButton(doc, { sheet, door: lastWho, textEl: text.p, text: entry.text, when: entryWhen(entry, t) }));
+        li.appendChild(actions);
+      }
       $('lb-day-entries').appendChild(li);
     }
     for (const r of rows) r.remeasure();
@@ -184,6 +189,7 @@ export function createLookback({ data, showScreen, rail = { show() {} }, onNavig
     rows = [];
     cellByDay = new Map();
     expanded.clear();
+    if (sheet) sheet.clear(); // words being sent never outlive the screen
     setError('');
     $('lb-empty').hidden = true;
     $('lb-chart').replaceChildren();

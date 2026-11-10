@@ -44,6 +44,7 @@
 .nt-who { overflow-wrap: break-word; overflow-wrap: anywhere; }
 .nt-who::after { content: ' \00b7'; }
 .nt-meta .td-link { margin-left: auto; font-size: 15px; padding: 0 6px; }
+.nt-from { padding: 0 8px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; line-height: 1.5; }
 .nt-confirm-q { margin-left: auto; color: var(--fg); }
 .nt-confirm-q + .td-link { margin-left: 0; }
 .nt-text { margin: 4px 0 0; font: italic 400 21px/1.35 'Fraunces', Georgia, 'Times New Roman', serif; color: var(--fg);

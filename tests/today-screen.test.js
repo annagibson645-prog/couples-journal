@@ -213,3 +213,71 @@ test('long entries collapse behind a Read more button; short ones have none', as
   assert.ok(textOf(0).className.split(' ').includes('td-clamp'));
   assert.equal(btnOf(1).hidden, true);
 });
+
+// --- send part of an entry to the other person ---------------------------
+function sheetStub() {
+  const calls = { open: [], clear: 0 };
+  return { calls, open: (...a) => calls.open.push(a), close() {}, clear() { calls.clear += 1; } };
+}
+const sendBtn = (li) => li.byClass('td-send')[0];
+
+test('each entry has a "Send to him" button for Hers and "Send to her" for His, opening the sheet with the entry text', async () => {
+  const sheet = sheetStub();
+  const { $, today } = setup({ entries: [entry('a', 'one two three')] });
+  const s2 = setup({ entries: [entry('a', 'one two three')] });
+  const t = createToday({ data: s2.data, document: s2.doc, now: () => new Date(2026, 10, 5, 10, 0), debounceMs: 5, showScreen() {}, sheet });
+  await t.show('hers');
+  const b = sendBtn(s2.$('td-list').children[0]);
+  assert.equal(b.textContent, 'Send to him');
+  assert.match(b.getAttribute('aria-label'), /^Send to him/);
+  b.click();
+  assert.deepEqual(sheet.calls.open[0].slice(0, 3), ['one two three', b, '']);
+  await t.show('his');
+  assert.equal(sendBtn(s2.$('td-list').children[0]).textContent, 'Send to her');
+  void $; void today;
+});
+
+test('without a sheet there is no send button (older callers are unchanged)', async () => {
+  const { $, today } = setup({ entries: [entry('a', 'x')] });
+  await today.show('hers');
+  assert.equal(sendBtn($('td-list').children[0]), undefined);
+});
+
+test('a selection inside the entry text starts the sheet with only the selection, even if pressing the button cleared it', async () => {
+  const sheet = sheetStub();
+  const s = setup({ entries: [entry('a', 'one two three')] });
+  const t = createToday({ data: s.data, document: s.doc, now: () => new Date(2026, 10, 5, 10, 0), debounceMs: 5, showScreen() {}, sheet });
+  await t.show('hers');
+  const li = s.$('td-list').children[0];
+  const p = li.byClass('td-text')[0];
+  p.contains = (n) => n === p;
+  let picked = 'two';
+  s.doc.getSelection = () => (picked ? { rangeCount: 1, isCollapsed: false, anchorNode: p, focusNode: p, toString: () => picked } : { rangeCount: 0, isCollapsed: true });
+  const b = sendBtn(li);
+  b.dispatch('pointerdown'); // the phone clears the selection before the click
+  picked = '';
+  b.click();
+  assert.equal(sheet.calls.open[0][2], 'two');
+  // a later plain click (keyboard) with no selection sends the whole entry; the old capture is gone
+  b.click();
+  assert.equal(sheet.calls.open[1][2], '');
+  // touchstart and mousedown both capture, and the empty second one does not erase the first
+  picked = 'three';
+  b.dispatch('touchstart');
+  picked = '';
+  b.dispatch('mousedown');
+  b.click();
+  assert.equal(sheet.calls.open[2][2], 'three');
+});
+
+test('show and clear wipe the sheet, and the entry text is unchanged by sending', async () => {
+  const sheet = sheetStub();
+  const s = setup({ entries: [entry('a', 'keep me')] });
+  const t = createToday({ data: s.data, document: s.doc, now: () => new Date(2026, 10, 5, 10, 0), debounceMs: 5, showScreen() {}, sheet });
+  await t.show('hers');
+  const before = sheet.calls.clear;
+  t.clear();
+  assert.ok(sheet.calls.clear > before);
+  await t.show('hers');
+  assert.equal(s.$('td-list').children[0].byClass('td-text')[0].textContent, 'keep me');
+});

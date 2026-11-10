@@ -321,3 +321,31 @@ test('the retry button is hidden when there is no error', async () => {
   await lookback.show('hers');
   assert.equal($('lb-retry').hidden, true);
 });
+
+// --- send part of an entry to the other person ---------------------------
+test('the day panel has a send button per entry, for the right person, and clear wipes the sheet', async () => {
+  const calls = { open: [], clear: 0 };
+  const sheet = { open: (...a) => calls.open.push(a), close() {}, clear() { calls.clear += 1; } };
+  const doc = makeLookbackDom();
+  const lb = createLookback({
+    data: { getMoods: async () => ({}), listEntries: async () => [entry('a', 5, 'words here')] }, document: doc, now: NOW,
+    showScreen() {}, rail: { show() {} }, onNavigate() {}, sheet,
+  });
+  await lb.show('his');
+  const li = doc.byId['lb-day-entries'].children[0];
+  const b = li.byClass('td-send')[0];
+  assert.equal(b.textContent, 'Send to her');
+  b.click();
+  assert.deepEqual(calls.open[0].slice(0, 3), ['words here', b, '']);
+  const before = calls.clear;
+  lb.clear();
+  assert.ok(calls.clear > before);
+  await lb.show('hers');
+  assert.equal(doc.byId['lb-day-entries'].children[0].byClass('td-send')[0].textContent, 'Send to him');
+});
+
+test('without a sheet the day panel is unchanged', async () => {
+  const { lookback, $ } = setup({ entries: [entry('a', 5, 'words here')] });
+  await lookback.show('hers');
+  assert.equal($('lb-day-entries').children[0].byClass('td-send').length, 0);
+});

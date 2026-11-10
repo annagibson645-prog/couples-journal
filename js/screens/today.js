@@ -3,7 +3,7 @@
 import { moonPath } from '../lib/sigil.js';
 import { dayKey } from '../lib/days.js';
 import { moodWord, moodLabel, moonFraction, formatDateHeading, entryWhen, wordCount, formatWordCount } from '../lib/today.js';
-import { makeEl, messageOf, collapsibleText } from './shared.js';
+import { makeEl, messageOf, collapsibleText, entrySendButton } from './shared.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const NOTHING_TO_SAVE = 'There is nothing to save yet. Write a few words first, then save.';
@@ -11,10 +11,11 @@ const SAVED = 'Saved on this device, then synced';
 const REFRESH_FAILED = "Saved, but we couldn't refresh the list. Reopen Today to see it.";
 
 // deps: { data, showScreen, rail?, document?, now?, debounceMs? }
+// `sheet` is the shared send dialog (js/screens/send-sheet.js); without one there is no send button.
 // `rail` is the shared left rail (js/screens/rail.js); it owns navigation, so
 // the app calls leave() before moving away from Today.
 // `document` and `now` default to the real ones; tests pass stand-ins.
-export function createToday({ data, showScreen, rail = { show() {} }, document: doc = globalThis.document, now = () => new Date(), debounceMs = 600 }) {
+export function createToday({ data, showScreen, rail = { show() {} }, sheet = null, document: doc = globalThis.document, now = () => new Date(), debounceMs = 600 }) {
   const el = makeEl(doc);
   const $ = (id) => doc.getElementById(id);
   let who = 'hers';
@@ -199,6 +200,7 @@ export function createToday({ data, showScreen, rail = { show() {} }, document: 
         actions.append(yes, keep);
         if (focus && focus.id === entry.id && focus.kind === 'yes') toFocus = yes;
       } else {
+        if (sheet) actions.appendChild(entrySendButton(doc, { sheet, door: who, textEl: text.p, text: entry.text, when: entryWhen(entry, today) }));
         const del = el('button', 'td-link', 'Delete');
         del.type = 'button';
         del.setAttribute('aria-label', `Delete the entry from ${entryWhen(entry, today)}`);
@@ -294,6 +296,7 @@ export function createToday({ data, showScreen, rail = { show() {} }, document: 
     cancelDraft();
     expanded.clear();
     rows = [];
+    if (sheet) sheet.clear(); // words being sent never outlive the screen
     $('td-text').value = '';
     updateCount();
     autoGrow();

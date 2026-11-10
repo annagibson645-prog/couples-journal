@@ -136,3 +136,15 @@ test('sample mode: router.signOut is still the wipe (used by Reset sample data)'
   assert.equal(storage.length, 0);
   assert.equal(calls.screens.at(-1), 'front');
 });
+
+test('sign-out and moving between screens wipe the send dialog', async () => {
+  let cleared = 0;
+  const sheet = { clear() { cleared += 1; } };
+  const none = { show() {}, leave() {}, clear() {} };
+  const data = { currentSession: () => ({ door: 'hers' }), signOut: async () => {} };
+  const router = createRouter({ data, today: none, lookback: none, save: none, sheet, showScreen() {}, showGate() {} });
+  router.navigate('lookback');
+  assert.equal(cleared, 1);
+  await router.signOut();
+  assert.equal(cleared, 2);
+});

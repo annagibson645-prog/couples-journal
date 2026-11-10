@@ -9,6 +9,7 @@ import { createLookback } from './screens/lookback.js';
 import { createExport } from './screens/export.js';
 import { createNotes } from './screens/notes.js';
 import { createRail } from './screens/rail.js';
+import { createSendSheet } from './screens/send-sheet.js';
 import { createRouter } from './router.js';
 import { guarded } from './lib/fatal.js';
 
@@ -73,8 +74,10 @@ function init() {
   // One rail component, one instance per journal screen; sections share one router.
   const railFor = (current) => createRail({ host: document.querySelector(`[data-rail="${current}"]`), current, demo, onNavigate: (k) => router.navigate(k) });
   const rails = [railFor('today'), railFor('lookback'), railFor('save'), railFor('notes')];
-  const today = createToday({ data, showScreen, rail: rails[0] });
-  const lookback = createLookback({ data, showScreen, rail: rails[1], onNavigate: (k) => router.navigate(k) });
+  // One send dialog for Today and Look back. Its text is wiped wherever the screens wipe theirs.
+  const sheet = createSendSheet({ data, doc: document, getViewerDoor: () => { const s = data.currentSession(); return s && s.door; } });
+  const today = createToday({ data, showScreen, rail: rails[0], sheet });
+  const lookback = createLookback({ data, showScreen, rail: rails[1], sheet, onNavigate: (k) => router.navigate(k) });
   const save = createExport({ data, showScreen, rail: rails[2] });
   // Switching the Notes viewer: save what the person leaving was writing, then wipe it from memory.
   const beforeSwitch = async () => {
@@ -82,9 +85,10 @@ function init() {
     today.clear();
     lookback.clear();
     save.clear();
+    sheet.clear();
   };
   const notes = createNotes({ data, showScreen, rail: rails[3], demo, beforeSwitch });
-  const router = createRouter({ demo, data, today, lookback, save, notes, rails, showScreen, showGate });
+  const router = createRouter({ demo, data, today, lookback, save, notes, sheet, rails, showScreen, showGate });
   const signOut = router.signOut;
   let doors;
   // A door that fails to open shows a visible message with Reload instead of doing nothing.

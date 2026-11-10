@@ -1,5 +1,6 @@
 // Small DOM helpers shared by the journal screens (Today, Look back, ...).
 import { needsCollapse } from '../lib/today.js';
+import { sendLabel, selectedTextIn } from '../lib/send.js';
 
 export function makeEl(doc) {
   return (tag, className, text) => {
@@ -41,4 +42,24 @@ export function collapsibleText(doc, id, text, expanded) {
     more.setAttribute('aria-expanded', String(nowOpen));
   });
   return { p, more, remeasure() { if (!expanded.has(id)) more.hidden = !overflows(p, text); } };
+}
+
+// The "Send to him / Send to her" button under an entry. Pressing it opens the shared send dialog
+// with the entry's words, or only the words the person had selected inside this entry. A phone can
+// clear the selection as the finger lands, before the click, so it is also read when the press begins.
+export function entrySendButton(doc, { sheet, door, textEl, text, when }) {
+  const label = sendLabel(door);
+  const b = makeEl(doc)('button', 'td-send', label);
+  b.type = 'button';
+  b.setAttribute('aria-label', `${label}: entry from ${when}`);
+  let captured = '';
+  const grab = () => { const t = selectedTextIn(doc, textEl); if (t) captured = t; }; // an empty read never erases a good one
+  for (const ev of ['pointerdown', 'mousedown', 'touchstart']) b.addEventListener(ev, grab);
+  for (const ev of ['pointercancel', 'pointerleave', 'touchcancel']) b.addEventListener(ev, () => { captured = ''; });
+  b.addEventListener('click', () => {
+    const picked = captured || selectedTextIn(doc, textEl);
+    captured = '';
+    sheet.open(text, b, picked);
+  });
+  return b;
 }

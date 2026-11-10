@@ -3,8 +3,9 @@
 //   today / lookback / save / notes: screen controllers { show(door), clear() }; today and notes also leave()
 //   demo: sample mode. The rail's Sign out key only goes back to the front page (nothing is wiped);
 //   signOut() itself stays the wipe, which "Reset sample data" uses.
+//   sheet: the shared send dialog; its text is wiped on sign-out and whenever the person moves to another screen
 //   rails: shared rails to wipe on sign-out; showGate(title, text, who, signOut)
-export function createRouter({ demo = false, data, today, lookback, save, notes = { show() {}, leave() {}, clear() {} }, rails = [], showScreen, showGate }) {
+export function createRouter({ demo = false, data, today, lookback, save, notes = { show() {}, leave() {}, clear() {} }, sheet = { clear() {} }, rails = [], showScreen, showGate }) {
   // Sign out: wait for a pending draft to be written, THEN wipe, so the write
   // cannot land after (and undo) the wipe.
   async function signOut() {
@@ -13,6 +14,7 @@ export function createRouter({ demo = false, data, today, lookback, save, notes 
     lookback.clear();
     save.clear();
     notes.clear(); // also drops its live listener
+    sheet.clear();
     for (const r of rails) r.clear();
     try { await data.signOut(); } finally { showScreen('front'); }
   }
@@ -22,6 +24,7 @@ export function createRouter({ demo = false, data, today, lookback, save, notes 
     if (name === 'signout') name = 'front';
     today.leave(); // saves a draft that was still waiting
     notes.leave(); // stops listening for notes
+    sheet.clear(); // no half-written message survives a change of screen
     if (name === 'front') { showScreen('front'); return undefined; } // still signed in
     const session = data.currentSession();
     if (!session) { showScreen('front'); return undefined; }

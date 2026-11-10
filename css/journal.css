@@ -62,6 +62,37 @@
 @media (hover: hover) { .td-link:hover { color: var(--acc); } }
 .td-danger { color: var(--fg); }
 
+/* Send part of an entry to the other person: the pill under each entry, and the dialog (js/screens/send-sheet.js).
+   A centred dialog on wide screens; a full-width bottom sheet under 760px. */
+.td-send { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 18px; border-radius: 999px; border: 1px solid var(--acc);
+  background: rgba(var(--accrgb), .14); color: var(--fg); cursor: pointer; font: italic 400 17px 'Newsreader', Georgia, 'Times New Roman', serif; }
+@media (hover: hover) { .td-send:hover { background: rgba(var(--accrgb), .24); } }
+html.sd-lock { overflow: hidden; }
+.sd-live { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sd-scrim { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: var(--scrim); overscroll-behavior: contain; }
+.sd-dialog { box-sizing: border-box; width: 100%; max-width: 640px; max-height: 100%; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--sheet); color: var(--fg); border: 1px solid rgba(var(--accrgb), .6); border-radius: 20px; padding: 26px 28px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .45); }
+.sd-title { margin: 0; font: italic 400 32px/1.1 'Fraunces', Georgia, 'Times New Roman', serif; }
+.sd-intro { margin: 10px 0 0; font: italic 400 17px/1.5 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--muted); }
+.sd-label { display: block; margin-top: 16px; font: italic 400 16px 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--muted); }
+.sd-area { display: block; box-sizing: border-box; width: 100%; max-width: 100%; height: 150px; margin-top: 6px; padding: 14px 16px; border-radius: 12px;
+  border: 1px solid var(--line); background: transparent; color: var(--fg); font: 400 18px/1.55 'Newsreader', Georgia, 'Times New Roman', serif;
+  resize: vertical; overflow-y: auto; }
+.sd-area:focus { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sd-meta { margin-top: 8px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2px 16px; font: italic 400 15px 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--muted); }
+.sd-limit { margin: 8px 0 0; font: italic 400 16px/1.4 'Newsreader', Georgia, 'Times New Roman', serif; color: var(--fg); }
+.sd-limit:empty { display: none; }
+.sd-error { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--acc); font: italic 400 16px/1.45 'Newsreader', Georgia, 'Times New Roman', serif;
+  color: var(--fg); overflow-wrap: break-word; overflow-wrap: anywhere; }
+.sd-buttons { margin-top: 18px; display: flex; gap: 12px; justify-content: flex-end; }
+.sd-cancel { min-height: 48px; padding: 10px 24px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--fg);
+  font: italic 400 18px 'Newsreader', Georgia, 'Times New Roman', serif; cursor: pointer; }
+@media (hover: hover) { .sd-cancel:hover { background: rgba(127,127,127,.16); } }
+.sd-send { color: var(--on-acc); }
+.sd-send:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
 @media (max-width: 760px) {
   .jscreen { flex-direction: column; }
   .rail { flex: none; border-right: 0; border-bottom: 1px solid var(--line); }
@@ -79,5 +110,14 @@
   .td-scale { max-width: 360px; }
   .td-word { font-size: 24px; }
   .td-text { font-size: 18px; }
+  /* The dialog becomes a bottom sheet: full width, never wider than the screen, scrolls inside itself above the keyboard. */
+  .sd-scrim { align-items: flex-end; padding: 0; }
+  .sd-dialog { max-width: none; max-height: 92vh; max-height: 92dvh; border-width: 1px 0 0; border-radius: 20px 20px 0 0; padding: 20px 16px 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -12px 40px rgba(0, 0, 0, .4); animation: sd-up .22s ease-out; }
+  .sd-title { font-size: 28px; }
+  .sd-area { height: 30vh; height: 30dvh; min-height: 120px; font-size: 16px; }
+  .sd-buttons { flex-direction: column-reverse; gap: 10px; }
+  .sd-cancel, .sd-send { width: 100%; min-height: 48px; justify-content: center; text-align: center; }
 }
-@media (prefers-reduced-motion: reduce) { .rail-nav button { transition: none; } }
+@keyframes sd-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rail-nav button { transition: none; } .sd-dialog { animation: none; } }
