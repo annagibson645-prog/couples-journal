@@ -146,6 +146,7 @@ export function createDictation({ win, area, button, previewEl, statusEl, alertE
   }
 
   function launch() {
+    release(); // never two engines at once: the old one is aborted first
     const Engine = win.SpeechRecognition || win.webkitSpeechRecognition;
     const mine = new Engine();
     began = false;

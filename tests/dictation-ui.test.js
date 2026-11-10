@@ -558,3 +558,14 @@ test('onChange is told the new value after an insert', () => {
   begin(t).say([['hello', true]]);
   assert.deepEqual(seen, ['hello']);
 });
+
+test('a second begin (a stray Start click) never leaves an earlier engine listening', () => {
+  const t = setup({ storage: memoryStorage({ [KEY]: '1' }) });
+  t.button.click();
+  const first = t.engine();
+  t.startBtn.click();
+  assert.equal(FakeEngine.all.length, 2);
+  assert.equal(first.running, false);
+  assert.equal(first.aborted, 1);
+  assert.equal(FakeEngine.all.filter((x) => x.running).length, 1);
+});
