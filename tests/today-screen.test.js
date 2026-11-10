@@ -369,15 +369,17 @@ test('dictation: leaving Today, showing it again and sign-out wipe stop the micr
   }
 });
 
-test('dictation: Save entry stops dictating first', async () => {
+test('dictation: Save entry stops gently and still saves the last words that were being heard', async () => {
   const s = dictSetup();
   await s.today.show('hers');
   s.$('td-dictate').click();
   const e = engines()[0];
   e.say('words to keep', true);
-  s.$('td-save').click(); await tick();
-  assert.equal(e.aborted, 1);
-  assert.deepEqual(s.calls.addEntry, ['words to keep']);
+  e.say('and the last bit', false);
+  s.$('td-save').click(); await wait(30);
+  assert.equal(e.stopped, 1);
+  assert.equal(e.aborted, 1, 'released afterwards');
+  assert.deepEqual(s.calls.addEntry, ['words to keep and the last bit']);
 });
 
 test('dictation: the typed text is not touched when dictation fails', async () => {
@@ -385,7 +387,7 @@ test('dictation: the typed text is not touched when dictation fails', async () =
   await s.today.show('hers');
   s.$('td-text').value = 'typed';
   s.$('td-dictate').click();
-  engines()[0].onerror({ error: 'not-allowed' });
+  engines()[0].onerror({ error: 'network' });
   assert.equal(s.$('td-text').value, 'typed');
-  assert.match(s.$('td-dc-alert').textContent, /microphone is blocked/);
+  assert.match(s.$('td-dc-alert').textContent, /internet connection/);
 });

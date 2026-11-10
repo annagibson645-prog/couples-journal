@@ -30,7 +30,7 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
   let known = null;         // ids already drawn; null until the first delivery
   let confirming = null;    // id of the note showing "Delete this note?"
   let buttons = new Map();  // `${id}:${kind}` -> the button, to place focus after a redraw
-  let dictation = { stop() {}, clear() {} }; // replaced below when the page has the Dictate button
+  let dictation = { finish: () => Promise.resolve(), clear() {} }; // replaced below when the page has the Dictate button
 
   // --- status --------------------------------------------------------------
   function setError(msg) {
@@ -145,16 +145,21 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
   async function send() {
     if (sending) return;
     const box = $('nt-text');
+    const before = token;
+    sending = true;
+    // Dictation stops gently first, so the last words heard are in the box before it is read.
+    await dictation.finish();
+    if (before !== token) return; // the screen was left or wiped meanwhile (teardown reset `sending`)
     const raw = box.value;
     setError('');
     announce('');
     const check = checkNote(raw);
     if (!check.ok) {
+      sending = false;
       setError(check.reason === 'long' ? TOO_LONG : EMPTY_TEXT);
       box.focus();
       return;
     }
-    dictation.stop(); // the microphone is off before the note goes
     const tk = token;
     const btn = $('nt-send');
     btn.disabled = true;
@@ -237,7 +242,7 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
   if ($('nt-dictate')) {
     dictation = createDictation({
       win, area: $('nt-text'), button: $('nt-dictate'), previewEl: $('nt-dc-hear'), statusEl: $('nt-dc-status'), alertEl: $('nt-dc-alert'),
-      notice: $('nt-dc-notice'), startBtn: $('nt-dc-start'), noBtn: $('nt-dc-no'),
+      notice: $('nt-dc-notice'), startBtn: $('nt-dc-start'), noBtn: $('nt-dc-no'), maxLength: NOTE_MAX,
     });
   }
   $('nt-text').addEventListener('keydown', (e) => {
@@ -280,6 +285,7 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
     if (!demo) return;
     if (switching) return;
     switching = true;
+    dictation.clear(); // the microphone goes off before anything is awaited
     const tk = token;
     const next = viewer === 'his' ? 'hers' : 'his';
     try {

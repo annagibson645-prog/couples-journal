@@ -12,18 +12,20 @@ class FakeEngine {
   static all = [];
   static startThrows = 0;
   static autoStart = true;
+  static nomatchOnThrow = false;
   constructor() {
     this.started = 0; this.aborted = 0; this.stopped = 0;
     FakeEngine.all.push(this);
   }
   start() {
     this.started += 1;
+    if (FakeEngine.nomatchOnThrow) this.onnomatch = () => {};
     if (FakeEngine.startThrows > 0) { FakeEngine.startThrows -= 1; throw new Error('InvalidStateError'); }
     this.running = true;
     if (FakeEngine.autoStart && this.onstart) this.onstart({});
   }
   abort() { this.aborted += 1; this.running = false; }
-  stop() { this.stopped += 1; this.running = false; }
+  stop() { this.stopped += 1; } // like a real engine: it keeps running until it reports end
   // test drivers: parts is [[text, isFinal], ...]
   say(parts, resultIndex = 0) {
     const results = parts.map(([t, f]) => Object.assign([{ transcript: t, confidence: 0.9 }], { isFinal: f }));
@@ -50,7 +52,7 @@ function memoryStorage(seed = {}) {
 }
 
 function setup(over = {}) {
-  FakeEngine.all = []; FakeEngine.startThrows = 0; FakeEngine.autoStart = true;
+  FakeEngine.all = []; FakeEngine.startThrows = 0; FakeEngine.autoStart = true; FakeEngine.nomatchOnThrow = false;
   const doc = { activeElement: null, visibilityState: 'visible', listeners: {} };
   doc.addEventListener = (t, f) => { (doc.listeners[t] ||= []).push(f); };
   doc.removeEventListener = (t, f) => { doc.listeners[t] = (doc.listeners[t] || []).filter((x) => x !== f); };
@@ -308,28 +310,167 @@ test('the source has no network calls, no logging, no recording and no storage o
   }
 });
 
-test('Stop: aborts the engine, drops its handlers, status "Stopped", button back to Dictate', () => {
+test('Stop (gentle): status Stopped at once, the engine is asked to stop (not aborted), and let go when it ends', () => {
   const t = setup();
   const e = begin(t);
   t.button.click();
-  assert.equal(e.aborted, 1);
-  assert.equal(e.onresult, null);
-  assert.equal(e.onend, null);
-  assert.equal(e.onerror, null);
+  assert.equal(e.stopped, 1);
+  assert.equal(e.aborted, 0);
   assert.equal(t.dictation.isListening(), false);
   assert.equal(t.button.getAttribute('aria-pressed'), 'false');
   assert.equal(t.button.getAttribute('aria-label'), 'Dictate');
   assert.equal(t.statusEl.textContent, 'Stopped');
-  assert.equal(t.previewEl.textContent, '');
   assert.equal(t.button.className.split(' ').includes('is-live'), false);
+  e.end();
+  assert.equal(e.aborted, 1, 'released when it ended');
+  assert.equal(e.onresult, null);
+  assert.equal(e.onend, null);
+  assert.equal(e.onerror, null);
+  assert.equal(t.previewEl.textContent, '');
+  assert.equal(t.timers.q.length, 0);
 });
 
-test('Escape inside the box stops dictation', () => {
+test('Stop then a late final result: the last words are still inserted', () => {
+  const t = setup();
+  const e = begin(t);
+  e.say([['first', true]]);
+  e.say([['first', true], ['and the last words', false]], 1);
+  t.button.click();
+  e.say([['first', true], ['and the last words', true]], 1);
+  assert.equal(t.area.value, 'first and the last words');
+  e.end();
+  assert.equal(e.aborted, 1);
+  assert.equal(t.area.value, 'first and the last words', 'nothing inserted twice');
+});
+
+test('Stop with only an interim phrase showing: that phrase is inserted when the engine ends', () => {
+  const t = setup();
+  const e = begin(t);
+  e.say([['half a thought', false]]);
+  t.button.click();
+  assert.equal(t.area.value, '');
+  e.end();
+  assert.equal(t.area.value, 'half a thought');
+  assert.equal(t.previewEl.textContent, '');
+  assert.equal(e.aborted, 1);
+});
+
+test('Stop and the engine never ends: released after the grace period, interim inserted, mic off', () => {
+  const t = setup();
+  const e = begin(t);
+  e.say([['dangling words', false]]);
+  t.button.click();
+  assert.equal(t.timers.q.length, 1);
+  assert.equal(t.timers.q[0].ms, 1500);
+  t.timers.fire();
+  assert.equal(t.area.value, 'dangling words');
+  assert.equal(e.aborted, 1);
+  assert.equal(e.onresult, null);
+  assert.equal(t.timers.q.length, 0);
+});
+
+test('finish(): resolves at once when idle, and after the gentle stop completes otherwise', async () => {
+  const t = setup();
+  await t.dictation.finish();
+  const e = begin(t);
+  e.say([['one', false]]);
+  let done = false;
+  t.button.click();
+  const p = t.dictation.finish().then(() => { done = true; });
+  await Promise.resolve();
+  assert.equal(done, false);
+  e.end();
+  await p;
+  assert.equal(done, true);
+  assert.equal(t.area.value, 'one');
+});
+
+test('finish() while still listening starts the gentle stop itself', async () => {
+  const t = setup();
+  const e = begin(t);
+  const p = t.dictation.finish();
+  assert.equal(e.stopped, 1);
+  assert.equal(t.dictation.isListening(), false);
+  e.end();
+  await p;
+});
+
+test('clear() during the grace period: nothing inserted, aborted at once, waiters released', async () => {
+  const t = setup();
+  const e = begin(t);
+  e.say([['unsaved words', false]]);
+  t.button.click();
+  const p = t.dictation.finish();
+  t.dictation.clear();
+  assert.equal(e.aborted, 1);
+  assert.equal(t.area.value, '');
+  assert.equal(t.timers.q.length, 0);
+  await p;
+  e.end();
+  assert.equal(t.area.value, '');
+});
+
+test('the page hiding during the grace period aborts at once and inserts nothing', () => {
+  const t = setup();
+  const e = begin(t);
+  e.say([['x', false]]);
+  t.button.click();
+  t.doc.visibilityState = 'hidden';
+  for (const f of t.doc.listeners.visibilitychange || []) f({});
+  assert.equal(e.aborted, 1);
+  assert.equal(t.area.value, '');
+});
+
+test('pressing Dictate again during the grace period settles the old engine first, then starts a new one', () => {
+  const t = setup();
+  const e = begin(t);
+  e.say([['old', false]]);
+  t.button.click();
+  t.button.click();
+  assert.equal(e.aborted, 1);
+  assert.equal(t.area.value, 'old');
+  assert.equal(FakeEngine.all.length, 2);
+  assert.equal(t.dictation.isListening(), true);
+  assert.equal(FakeEngine.all.filter((x) => x.running).length, 1);
+});
+
+test('the microphone is never left on after any way of stopping', () => {
+  const ways = {
+    stop: (t) => { t.button.click(); t.engine().end(); },
+    stopTimeout: (t) => { t.button.click(); t.timers.fire(); },
+    escape: (t) => { t.area.dispatch('keydown', { key: 'Escape' }); t.engine().end(); },
+    clear: (t) => t.dictation.clear(),
+    hidden: (t) => { t.doc.visibilityState = 'hidden'; for (const f of t.doc.listeners.visibilitychange) f({}); },
+    pagehide: (t) => { for (const f of t.wl.pagehide) f({}); },
+    fatal: (t) => t.engine().fail('network'),
+  };
+  for (const [name, fn] of Object.entries(ways)) {
+    const t = setup();
+    begin(t);
+    fn(t);
+    assert.equal(t.timers.q.length, 0, name);
+    assert.ok(FakeEngine.all.every((x) => x.aborted >= 1 || !x.running), name);
+    assert.equal(FakeEngine.all.filter((x) => x.onresult).length, 0, `${name}: handlers dropped`);
+  }
+});
+
+test('Escape inside the box stops dictation (gently)', () => {
   const t = setup();
   const e = begin(t);
   t.area.dispatch('keydown', { key: 'Escape' });
-  assert.equal(e.aborted, 1);
+  assert.equal(e.stopped, 1);
   assert.equal(t.dictation.isListening(), false);
+});
+
+test('Escape on the focused Dictate button also stops dictation', () => {
+  const t = setup();
+  const e = begin(t);
+  t.button.dispatch('keydown', { key: 'Escape' });
+  assert.equal(e.stopped, 1);
+  assert.equal(t.dictation.isListening(), false);
+  const t2 = setup();
+  t2.button.dispatch('keydown', { key: 'Escape' });
+  assert.equal(t2.statusEl.textContent, '');
 });
 
 test('Escape in the box does nothing when not dictating', () => {
@@ -463,7 +604,7 @@ test('after many silent stretches in a row it stops instead of listening forever
     if (t.timers.q.length) { t.timers.fire(); e = t.engine(); }
   }
   assert.equal(t.dictation.isListening(), false);
-  assert.match(t.alertEl.textContent, /didn't hear/i);
+  assert.equal(t.alertEl.textContent, 'Dictation stopped because nothing was heard. Tap the microphone to start again.');
 });
 
 test('speech between silences keeps it going', () => {
@@ -479,6 +620,7 @@ test('speech between silences keeps it going', () => {
 for (const code of ['not-allowed', 'service-not-allowed']) {
   test(`error ${code}: plain message, stops, mic released, typed text kept`, () => {
     const t = setup();
+    FakeEngine.autoStart = false; // a first start that is refused never reports that it started
     t.area.value = 'typed before';
     const e = begin(t);
     e.fail(code);
@@ -542,10 +684,10 @@ test('stop() when not dictating is harmless and says nothing', () => {
   assert.equal(t.statusEl.textContent, '');
 });
 
-test('late events from a stopped engine are ignored', () => {
+test('late events from a released engine are ignored', () => {
   const t = setup();
   const e = begin(t);
-  t.dictation.stop();
+  t.dictation.clear();
   e.say([['late words', true]]);
   e.end();
   assert.equal(t.area.value, '');
@@ -568,4 +710,94 @@ test('a second begin (a stray Start click) never leaves an earlier engine listen
   assert.equal(first.running, false);
   assert.equal(first.aborted, 1);
   assert.equal(FakeEngine.all.filter((x) => x.running).length, 1);
+});
+
+test('an engine that starts and ends at once with no error (the iOS habit) stops after 6 in a row', () => {
+  const t = setup();
+  let e = begin(t);
+  let n = 0;
+  while (t.dictation.isListening() && n < 20) {
+    e.end(); n += 1;
+    if (t.timers.q.length) { t.timers.fire(); e = t.engine(); }
+  }
+  assert.equal(n, 6);
+  assert.equal(t.dictation.isListening(), false);
+  assert.equal(t.alertEl.textContent, 'Dictation stopped because nothing was heard. Tap the microphone to start again.');
+  assert.equal(t.statusEl.textContent, 'Stopped');
+  assert.equal(FakeEngine.all.filter((x) => x.running).length, 0);
+});
+
+test('hearing words (even only interim ones) resets the silent count', () => {
+  const t = setup();
+  let e = begin(t);
+  for (let i = 0; i < 15; i++) {
+    e.say([['hm', false]]);
+    e.end(); t.timers.fire(); e = t.engine();
+  }
+  assert.equal(t.dictation.isListening(), true);
+});
+
+test('a browser-initiated aborted error is counted as a failed start with no message, and gives up after 3', () => {
+  const t = setup();
+  const e = begin(t);
+  e.fail('aborted');
+  e.end();
+  assert.equal(t.alertEl.textContent, '');
+  assert.equal(t.timers.q.length, 1);
+  assert.equal(t.timers.q[0].ms, 250);
+  for (let i = 0; i < 2; i++) { t.timers.fire(); const n = t.engine(); n.fail('aborted'); n.end(); }
+  assert.equal(t.dictation.isListening(), false);
+  assert.match(t.alertEl.textContent, /keyboard's microphone key/);
+  assert.equal(FakeEngine.all.length, 3);
+});
+
+test('not-allowed after dictation had begun says paused, not blocked; a first-start refusal says blocked', () => {
+  const PAUSED = 'Dictation paused. Tap the microphone to keep going.';
+  const t = setup();
+  const e = begin(t);
+  e.end(); t.timers.fire();
+  t.engine().fail('not-allowed');
+  assert.equal(t.alertEl.textContent, PAUSED);
+  assert.equal(t.dictation.isListening(), false);
+  const t2 = setup();
+  const e2 = begin(t2);
+  e2.fail('service-not-allowed');
+  assert.equal(t2.alertEl.textContent, PAUSED, 'the engine had started');
+  const t3 = setup();
+  FakeEngine.autoStart = false;
+  begin(t3).fail('not-allowed');
+  assert.equal(t3.alertEl.textContent, BLOCKED);
+  // a fresh press after a pause follows the first-start rules again
+  const t4 = setup();
+  begin(t4).end(); t4.timers.fire(); t4.engine().fail('not-allowed');
+  FakeEngine.autoStart = false;
+  t4.button.click();
+  t4.engine().fail('not-allowed');
+  assert.equal(t4.alertEl.textContent, BLOCKED);
+});
+
+test('over the maximum length: dictation stops gently with a plain message', () => {
+  const t = setup({ opts: { maxLength: 20 } });
+  const e = begin(t);
+  e.say([['short', true]]);
+  assert.equal(t.dictation.isListening(), true);
+  e.say([['short', true], ['and now rather a long sentence', true]], 1);
+  assert.equal(t.dictation.isListening(), false);
+  assert.equal(e.stopped, 1);
+  assert.equal(t.alertEl.textContent, 'Stopped: a note can hold 2,000 characters.');
+  assert.equal(t.statusEl.textContent, 'Stopped');
+  assert.ok(t.area.value.length > 20, 'what was heard is kept; the counter shows the overage');
+});
+
+test('onnomatch is dropped on the end path and on the start-throws path', () => {
+  const t = setup();
+  const e = begin(t);
+  e.onnomatch = () => {};
+  e.end();
+  assert.equal(e.onnomatch, null);
+  const t2 = setup();
+  FakeEngine.nomatchOnThrow = true;
+  FakeEngine.startThrows = 1;
+  t2.button.click(); t2.startBtn.click();
+  assert.equal(FakeEngine.all[0].onnomatch, null);
 });

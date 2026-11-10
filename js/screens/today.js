@@ -29,7 +29,8 @@ export function createToday({ data, showScreen, rail = { show() {} }, sheet = nu
   let draftTimer = null;     // pending debounced draft save
   const expanded = new Set(); // ids of long entries opened with Read more
   let rows = [];             // { entry, p, more } for the entries on screen
-  let dictation = { stop() {}, clear() {} }; // replaced below when the page has the Dictate button
+  let finishing = false;     // Save entry is waiting for dictation to finish
+  let dictation = { finish: () => Promise.resolve(), clear() {} }; // replaced below when the page has the Dictate button
 
   // --- status area ---------------------------------------------------------
   function setError(msg) {
@@ -250,6 +251,13 @@ export function createToday({ data, showScreen, rail = { show() {} }, sheet = nu
   async function saveEntry() {
     syncDay();
     const box = $('td-text');
+    const before = token;
+    if (finishing) return; // a second press while the last words are still arriving
+    finishing = true;
+    // Dictation stops gently first, so the last words heard are in the box before it is read.
+    await dictation.finish();
+    finishing = false;
+    if (before !== token) return; // the screen was left or wiped meanwhile
     const text = box.value;
     clearStatus();
     if (!text.trim()) {
@@ -257,7 +265,6 @@ export function createToday({ data, showScreen, rail = { show() {} }, sheet = nu
       box.focus();
       return;
     }
-    dictation.stop(); // the microphone is off before the words are saved
     const t = token;
     const btn = $('td-save');
     btn.disabled = true;

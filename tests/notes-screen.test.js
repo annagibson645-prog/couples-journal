@@ -6,6 +6,7 @@ import { createDemoAdapter } from '../js/data/demo.js';
 import { makeNotesDom } from './helpers/fake-dom.js';
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const NOW = new Date(2026, 10, 5, 12, 0);
 const t = (d, h, m) => new Date(2026, 10, d, h, m).getTime();
 
@@ -646,13 +647,37 @@ test('dictation: leaving, signing out, showing again and switching viewer each s
   }
 });
 
-test('dictation: Leave note stops dictating, and a refused note keeps the words', async () => {
+test('dictation: Leave note stops gently and sends the last words that were being heard', async () => {
   const s = dictSetup();
   await s.screen.show('hers');
   s.$('nt-dictate').click();
   const e = engines()[0];
   e.say('hello there', true);
-  s.$('nt-send').click(); await tick();
+  e.say('and one more', false);
+  s.$('nt-send').click(); await wait(30);
+  assert.equal(e.stopped, 1);
   assert.equal(e.aborted, 1);
-  assert.deepEqual(s.calls.addNote, ['hello there']);
+  assert.deepEqual(s.calls.addNote, ['hello there and one more']);
+});
+
+test('dictation: switching viewer turns the microphone off at once, before anything is awaited', async () => {
+  const s = dictSetup({ screen: { demo: true } });
+  await s.screen.show('hers');
+  s.$('nt-dictate').click();
+  const e = engines()[0];
+  s.$('nt-switch').click();
+  assert.equal(e.aborted, 1);
+  assert.equal(e.running, false);
+  await tick(); await tick();
+});
+
+test('dictation: dictating past 2,000 characters stops with a plain message and keeps the counter', async () => {
+  const s = dictSetup();
+  await s.screen.show('hers');
+  s.$('nt-dictate').click();
+  const e = engines()[0];
+  e.say('x'.repeat(2100), true);
+  assert.equal(e.stopped, 1);
+  assert.equal(s.$('nt-dc-alert').textContent, 'Stopped: a note can hold 2,000 characters.');
+  assert.match(s.$('nt-count').textContent, /over/);
 });
