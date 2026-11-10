@@ -110,17 +110,25 @@ export function createSendSheet({ data, document: docDep, doc: docAlt, getViewer
   }
 
   // On phones the on-screen keyboard can cover a bottom sheet; follow the visible part of the screen.
-  const vv = doc.defaultView && doc.defaultView.visualViewport;
+  const win = doc.defaultView;
+  const vv = win && win.visualViewport;
+  const vp = vv || win; // what tells us the visible size changed
   function fit() {
-    if (!vv) return;
-    scrim.style.top = `${vv.offsetTop}px`;
-    scrim.style.bottom = 'auto';
-    scrim.style.height = `${vv.height}px`;
+    const h = vv ? vv.height : (win && win.innerHeight) || 0;
+    if (!h) return;
+    if (vv) {
+      scrim.style.top = `${vv.offsetTop}px`;
+      scrim.style.bottom = 'auto';
+      scrim.style.height = `${vv.height}px`;
+    }
+    // The visible height sizes the textarea in CSS (short screens, keyboard up, landscape).
+    if (scrim.style.setProperty) scrim.style.setProperty('--sd-vh', `${h}px`);
   }
   function unfit() {
     scrim.style.top = '';
     scrim.style.bottom = '';
     scrim.style.height = '';
+    if (scrim.style.removeProperty) scrim.style.removeProperty('--sd-vh');
   }
   // Focus somehow outside (an older browser without `inert`): bring it back in.
   function onFocusIn(e) {
@@ -134,7 +142,7 @@ export function createSendSheet({ data, document: docDep, doc: docAlt, getViewer
     unlockPage();
     unfit();
     doc.removeEventListener?.('focusin', onFocusIn);
-    if (vv) { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); }
+    if (vp) { vp.removeEventListener('resize', fit); if (vv) vv.removeEventListener('scroll', fit); }
     const back = trigger;
     trigger = null;
     if (!giveBack) return;
@@ -161,7 +169,8 @@ export function createSendSheet({ data, document: docDep, doc: docAlt, getViewer
     scrim.hidden = false;
     isOpen = true;
     doc.addEventListener?.('focusin', onFocusIn);
-    if (vv) { vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); fit(); }
+    if (vp) { vp.addEventListener('resize', fit); if (vv) vv.addEventListener('scroll', fit); }
+    fit();
     area.focus();
     // Start reading from the top, even for a very long entry.
     if (typeof area.setSelectionRange === 'function') { try { area.setSelectionRange(0, 0); } catch (e) { /* not supported here */ } }

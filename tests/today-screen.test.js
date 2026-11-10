@@ -280,6 +280,20 @@ test('MOUSE order: the selection is used, and a later plain click opens with the
   assert.equal(sheet.calls.open[1][2], '');
 });
 
+test('the 1.5 s expiry runs from the release, so a slow tap keeps its selection', async () => {
+  const { sheet, b, state } = await selectionSetup();
+  let t = 1000; Date.now = () => t;
+  try {
+    b.dispatch('pointerdown');
+    state.picked = '';
+    t += 3000; // a long press
+    b.dispatch('pointerup');
+    t += 300;
+    b.click();
+    assert.equal(sheet.calls.open[0][2], 'two');
+  } finally { Date.now = realNow; }
+});
+
 test('a stale capture does not survive the next press, and expires after about 1.5 seconds', async () => {
   const { sheet, b, state } = await selectionSetup();
   b.dispatch('pointerdown'); // captured 'two', never clicked (finger slid away)

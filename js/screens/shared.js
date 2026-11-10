@@ -49,7 +49,7 @@ export function collapsibleText(doc, id, text, expanded) {
 // whole entry, so a selection that strays a little past the text is clipped to it). A phone can clear
 // the selection as the finger lands, before the click, so it is also read when the press begins. On
 // touch the order is pointerdown, pointerup, pointerout, pointerleave, mouse events, click: nothing in
-// between may erase the capture. It is dropped at the next press, on cancel, and after 1.5 s.
+// between may erase the capture. It is dropped at the next press, on cancel, and 1.5 s after the release.
 const CAPTURE_MS = 1500;
 export function entrySendButton(doc, { sheet, door, textEl, entryEl = textEl, text, when }) {
   const label = sendLabel(door);
@@ -61,6 +61,7 @@ export function entrySendButton(doc, { sheet, door, textEl, entryEl = textEl, te
   const grab = () => { const t = selectedTextIn(doc, textEl, entryEl); if (t) { captured = t; at = Date.now(); } }; // an empty read never erases a good one
   b.addEventListener('pointerdown', () => { captured = ''; grab(); }); // a new press starts afresh
   for (const ev of ['mousedown', 'touchstart']) b.addEventListener(ev, grab);
+  for (const ev of ['pointerup', 'touchend', 'mouseup']) b.addEventListener(ev, () => { if (captured) at = Date.now(); }); // the 1.5 s runs from the release
   for (const ev of ['pointercancel', 'touchcancel']) b.addEventListener(ev, () => { captured = ''; });
   b.addEventListener('click', () => {
     const fresh = captured && Date.now() - at <= CAPTURE_MS ? captured : '';
