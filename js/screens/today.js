@@ -4,18 +4,19 @@ import { moonPath } from '../lib/sigil.js';
 import { dayKey } from '../lib/days.js';
 import { moodWord, moodLabel, moonFraction, formatDateHeading, entryWhen, wordCount, formatWordCount } from '../lib/today.js';
 import { makeEl, messageOf, collapsibleText, entrySendButton } from './shared.js';
+import { createDictation } from './dictation.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const NOTHING_TO_SAVE = 'There is nothing to save yet. Write a few words first, then save.';
 const SAVED = 'Saved on this device, then synced';
 const REFRESH_FAILED = "Saved, but we couldn't refresh the list. Reopen Today to see it.";
 
-// deps: { data, showScreen, rail?, document?, now?, debounceMs? }
+// deps: { data, showScreen, rail?, document?, win?, now?, debounceMs? }
 // `sheet` is the shared send dialog (js/screens/send-sheet.js); without one there is no send button.
 // `rail` is the shared left rail (js/screens/rail.js); it owns navigation, so
 // the app calls leave() before moving away from Today.
-// `document` and `now` default to the real ones; tests pass stand-ins.
-export function createToday({ data, showScreen, rail = { show() {} }, sheet = null, document: doc = globalThis.document, now = () => new Date(), debounceMs = 600 }) {
+// `document`, `win` (the window, for dictation) and `now` default to the real ones; tests pass stand-ins.
+export function createToday({ data, showScreen, rail = { show() {} }, sheet = null, document: doc = globalThis.document, win = globalThis, now = () => new Date(), debounceMs = 600 }) {
   const el = makeEl(doc);
   const $ = (id) => doc.getElementById(id);
   let who = 'hers';
@@ -28,6 +29,7 @@ export function createToday({ data, showScreen, rail = { show() {} }, sheet = nu
   let draftTimer = null;     // pending debounced draft save
   const expanded = new Set(); // ids of long entries opened with Read more
   let rows = [];             // { entry, p, more } for the entries on screen
+  let dictation = { stop() {}, clear() {} }; // replaced below when the page has the Dictate button
 
   // --- status area ---------------------------------------------------------
   function setError(msg) {
@@ -255,6 +257,7 @@ export function createToday({ data, showScreen, rail = { show() {} }, sheet = nu
       box.focus();
       return;
     }
+    dictation.stop(); // the microphone is off before the words are saved
     const t = token;
     const btn = $('td-save');
     btn.disabled = true;
@@ -297,6 +300,7 @@ export function createToday({ data, showScreen, rail = { show() {} }, sheet = nu
     expanded.clear();
     rows = [];
     if (sheet) sheet.clear(); // words being sent never outlive the screen
+    dictation.clear(); // the microphone never outlives the screen
     $('td-text').value = '';
     updateCount();
     autoGrow();
@@ -319,6 +323,13 @@ export function createToday({ data, showScreen, rail = { show() {} }, sheet = nu
   for (const id of ['td-text', 'td-note']) $(id).addEventListener('input', () => { $('td-status').hidden = true; });
   $('td-note').addEventListener('input', updateHint);
   $('td-text').addEventListener('input', () => { updateCount(); autoGrow(); scheduleDraft(); });
+  // Dictation (speech to text): the button exists only in the page markup; it never starts by itself.
+  if ($('td-dictate')) {
+    dictation = createDictation({
+      win, area: $('td-text'), button: $('td-dictate'), previewEl: $('td-dc-hear'), statusEl: $('td-dc-status'), alertEl: $('td-dc-alert'),
+      notice: $('td-dc-notice'), startBtn: $('td-dc-start'), noBtn: $('td-dc-no'),
+    });
+  }
   // Closing or reloading the page: save a waiting draft straight away.
   globalThis.addEventListener?.('pagehide', flushDraft);
   doc.addEventListener?.('visibilitychange', () => { if (doc.visibilityState === 'hidden') flushDraft(); });
@@ -360,7 +371,7 @@ export function createToday({ data, showScreen, rail = { show() {} }, sheet = nu
       }
     },
     // Called by the app before it moves to another screen: save a waiting draft.
-    leave: flushDraft,
+    leave() { dictation.clear(); return flushDraft(); },
     // Wipe everything typed or shown (sign-out on a shared device).
     clear: resetView,
   };

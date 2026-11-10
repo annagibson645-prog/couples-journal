@@ -24,7 +24,7 @@ function setup(overrides = {}, nowFn) {
     saveMood: async (...a) => { calls.saveMood.push(a); },
     ...overrides.data,
   };
-  const today = createToday({ data, document: doc, now: nowFn || (() => new Date(2026, 10, 5, 10, 0)), debounceMs: 5, showScreen() {} });
+  const today = createToday({ data, document: doc, now: nowFn || (() => new Date(2026, 10, 5, 10, 0)), debounceMs: 5, showScreen() {}, ...(overrides.deps || {}) });
   return { doc, data, calls, today, draftNow: () => draft, $: (id) => doc.byId[id] };
 }
 const entry = (id, text) => ({ id, day: '2026-11-05', text, createdAt: new Date(2026, 10, 5, 9, 0).getTime() });
@@ -326,4 +326,66 @@ test('show and clear wipe the sheet, and the entry text is unchanged by sending'
   assert.ok(sheet.calls.clear > before);
   await t.show('hers');
   assert.equal(s.$('td-list').children[0].byClass('td-text')[0].textContent, 'keep me');
+});
+
+// --- dictation on Today -----------------------------------------------------
+import { makeSpeechWin, engines } from './helpers/fake-speech.js';
+
+function dictSetup(over) {
+  const win = makeSpeechWin();
+  return { ...setup({ ...over, deps: { win } }), win };
+}
+
+test('dictation: the Dictate button shows on Today but nothing listens until it is pressed', async () => {
+  const s = dictSetup();
+  await s.today.show('hers');
+  assert.equal(s.$('td-dictate').hidden, false);
+  assert.equal(engines().length, 0);
+});
+
+test('dictation: heard words land in the box, update the word count and save the draft', async () => {
+  const s = dictSetup();
+  await s.today.show('hers');
+  s.$('td-dictate').click();
+  const e = engines()[0];
+  e.say('a quiet day by the sea', true);
+  assert.equal(s.$('td-text').value, 'a quiet day by the sea');
+  assert.equal(s.$('td-count').textContent, '6 words');
+  await wait(30);
+  assert.equal(s.draftNow(), 'a quiet day by the sea');
+});
+
+test('dictation: leaving Today, showing it again and sign-out wipe stop the microphone', async () => {
+  for (const how of ['leave', 'clear', 'show']) {
+    const s = dictSetup();
+    await s.today.show('hers');
+    s.$('td-dictate').click();
+    const e = engines()[0];
+    assert.equal(e.running, true);
+    if (how === 'leave') await s.today.leave(); else if (how === 'clear') s.today.clear(); else await s.today.show('his');
+    assert.equal(e.running, false, how);
+    assert.equal(e.aborted, 1, how);
+    assert.equal(s.$('td-dc-status').textContent, '', how);
+  }
+});
+
+test('dictation: Save entry stops dictating first', async () => {
+  const s = dictSetup();
+  await s.today.show('hers');
+  s.$('td-dictate').click();
+  const e = engines()[0];
+  e.say('words to keep', true);
+  s.$('td-save').click(); await tick();
+  assert.equal(e.aborted, 1);
+  assert.deepEqual(s.calls.addEntry, ['words to keep']);
+});
+
+test('dictation: the typed text is not touched when dictation fails', async () => {
+  const s = dictSetup();
+  await s.today.show('hers');
+  s.$('td-text').value = 'typed';
+  s.$('td-dictate').click();
+  engines()[0].onerror({ error: 'not-allowed' });
+  assert.equal(s.$('td-text').value, 'typed');
+  assert.match(s.$('td-dc-alert').textContent, /microphone is blocked/);
 });

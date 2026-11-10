@@ -27,7 +27,8 @@ export class El {
 }
 
 const IDS = ['td-date', 'td-moons', 'td-word', 'td-note', 'td-text', 'td-save', 'td-status',
-  'td-error', 'td-hint', 'td-count', 'td-list', 'td-empty', 'td-entries-title'];
+  'td-error', 'td-hint', 'td-count', 'td-list', 'td-empty', 'td-entries-title',
+  'td-dictate', 'td-dc-notice', 'td-dc-start', 'td-dc-no', 'td-dc-status', 'td-dc-hear', 'td-dc-alert'];
 
 // Ids the Look back screen needs.
 export const LOOKBACK_IDS = ['lb-title', 'lb-sub', 'lb-error', 'lb-retry', 'lb-empty', 'lb-empty-text', 'lb-empty-today', 'lb-chart', 'lb-month', 'lb-prev', 'lb-next',
@@ -71,7 +72,8 @@ export function makeDom() {
 }
 
 // Ids the Notes screen needs.
-export const NOTES_IDS = ['nt-title', 'nt-text', 'nt-send', 'nt-count', 'nt-error', 'nt-live', 'nt-feed', 'nt-list', 'nt-empty', 'nt-new', 'nt-switch'];
+export const NOTES_IDS = ['nt-title', 'nt-text', 'nt-send', 'nt-count', 'nt-error', 'nt-live', 'nt-feed', 'nt-list', 'nt-empty', 'nt-new', 'nt-switch',
+  'nt-dictate', 'nt-dc-notice', 'nt-dc-start', 'nt-dc-no', 'nt-dc-status', 'nt-dc-hear', 'nt-dc-alert'];
 
 export function makeNotesDom() {
   const doc = { activeElement: null, byId: {} };

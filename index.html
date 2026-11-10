@@ -121,6 +121,7 @@
   <link rel="modulepreload" href="js/lib/chart.js">
   <link rel="modulepreload" href="js/lib/clone.js">
   <link rel="modulepreload" href="js/lib/days.js">
+  <link rel="modulepreload" href="js/lib/dictation.js">
   <link rel="modulepreload" href="js/lib/docx.js">
   <link rel="modulepreload" href="js/lib/escape.js">
   <link rel="modulepreload" href="js/lib/exportmodel.js">
@@ -136,6 +137,7 @@
   <link rel="modulepreload" href="js/router.js">
   <link rel="modulepreload" href="js/screens/banner.js">
   <link rel="modulepreload" href="js/screens/chart.js">
+  <link rel="modulepreload" href="js/screens/dictation.js">
   <link rel="modulepreload" href="js/screens/export.js">
   <link rel="modulepreload" href="js/screens/lookback.js">
   <link rel="modulepreload" href="js/screens/notes.js">
@@ -259,11 +261,26 @@
       <input class="td-field" id="td-note" type="text" maxlength="200" autocomplete="off" aria-label="A few words about the day, optional" placeholder="A few words about the day (optional)">
       <p class="td-hint" id="td-hint" hidden>Choose a moon and your words are saved with it.</p>
       <textarea class="td-field td-area" id="td-text" aria-label="Write an entry" placeholder="Write whenever you're ready."></textarea>
+      <p class="dc-hear" id="td-dc-hear"></p>
       <div class="td-actions">
         <button class="si-go" id="td-save" type="button">Save entry</button>
+        <button class="dc-btn" id="td-dictate" type="button" aria-pressed="false" aria-label="Dictate" title="Dictate" hidden>
+          <svg class="dc-ico dc-mic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg>
+          <svg class="dc-ico dc-stop" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+          <span class="dc-dot" aria-hidden="true"></span>
+        </button>
         <span class="td-count" id="td-count">0 words</span>
         <span class="td-status" id="td-status" role="status" hidden></span>
       </div>
+      <div class="dc-notice" id="td-dc-notice" role="group" aria-labelledby="td-dc-notice-text" hidden>
+        <p id="td-dc-notice-text">Dictation sends your voice to your browser's speech service: Google for Chrome, Apple for Safari. This site doesn't record or keep it. Start dictating?</p>
+        <div class="dc-notice-btns">
+          <button class="si-go dc-start" id="td-dc-start" type="button">Start</button>
+          <button class="dc-no" id="td-dc-no" type="button">Not now</button>
+        </div>
+      </div>
+      <p class="dc-status" id="td-dc-status" role="status" aria-live="polite"></p>
+      <p class="td-error dc-alert" id="td-dc-alert" role="alert"></p>
       <p class="td-error" id="td-error" role="alert" hidden></p>
       <section class="td-entries" aria-labelledby="td-entries-title">
         <h2 class="td-entries-title" id="td-entries-title" tabindex="-1">Your entries</h2>
@@ -366,8 +383,25 @@
         <p class="nt-live" id="nt-live" role="status" aria-live="polite"></p>
         <div class="nt-compose">
           <textarea class="td-field nt-area" id="nt-text" maxlength="2000" aria-label="Add to the thread" aria-describedby="nt-count" placeholder="Add to the thread."></textarea>
-          <button class="si-go nt-send" id="nt-send" type="button">Leave note</button>
+          <div class="nt-btns">
+            <button class="si-go nt-send" id="nt-send" type="button">Leave note</button>
+            <button class="dc-btn" id="nt-dictate" type="button" aria-pressed="false" aria-label="Dictate" title="Dictate" hidden>
+              <svg class="dc-ico dc-mic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg>
+              <svg class="dc-ico dc-stop" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+              <span class="dc-dot" aria-hidden="true"></span>
+            </button>
+          </div>
         </div>
+        <p class="dc-hear" id="nt-dc-hear"></p>
+        <div class="dc-notice" id="nt-dc-notice" role="group" aria-labelledby="nt-dc-notice-text" hidden>
+          <p id="nt-dc-notice-text">Dictation sends your voice to your browser's speech service: Google for Chrome, Apple for Safari. This site doesn't record or keep it. Start dictating?</p>
+          <div class="dc-notice-btns">
+            <button class="si-go dc-start" id="nt-dc-start" type="button">Start</button>
+            <button class="dc-no" id="nt-dc-no" type="button">Not now</button>
+          </div>
+        </div>
+        <p class="dc-status" id="nt-dc-status" role="status" aria-live="polite"></p>
+        <p class="td-error dc-alert" id="nt-dc-alert" role="alert"></p>
         <p class="nt-count" id="nt-count" hidden></p>
       </div>
     </section>

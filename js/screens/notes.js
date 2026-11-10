@@ -6,6 +6,7 @@
 import { NOTE_MAX, formatNoteTime, countLabel, checkNote, isOwn, authorOf, oldestFirst, dayLabel, dayKey } from '../lib/notes.js';
 import { sourceLabel } from '../lib/send.js';
 import { makeEl, messageOf } from './shared.js';
+import { createDictation } from './dictation.js';
 
 const LABEL = { hers: 'Hers', his: 'His' };
 const EMPTY_FEED = 'No notes yet. Leave the first one.';
@@ -13,12 +14,12 @@ const EMPTY_TEXT = 'Write a few words first, then leave the note.';
 const TOO_LONG = 'A note can be up to 2,000 characters. Please make this one a little shorter.';
 const NEAR_BOTTOM = 40; // px from the end that still counts as "at the newest"
 
-// deps: { data, showScreen, rail?, document?, now?, demo?, beforeSwitch? }
+// deps: { data, showScreen, rail?, document?, win?, now?, demo?, beforeSwitch? }
 // `demo` (sample mode) adds the viewer switch: one button that signs in as the other person.
 // `beforeSwitch` is awaited first so the app can save and wipe what the person leaving typed.
 // `rail` is the shared left rail (js/screens/rail.js). Navigation lives in the rail
 // and the router; the router calls leave() on the way out and clear() on sign-out.
-export function createNotes({ data, showScreen, rail = { show() {} }, document: doc = globalThis.document, now = () => new Date(), demo = false, beforeSwitch = async () => {} }) {
+export function createNotes({ data, showScreen, rail = { show() {} }, document: doc = globalThis.document, win = globalThis, now = () => new Date(), demo = false, beforeSwitch = async () => {} }) {
   const el = makeEl(doc);
   const $ = (id) => doc.getElementById(id);
   let viewer = 'hers';
@@ -29,6 +30,7 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
   let known = null;         // ids already drawn; null until the first delivery
   let confirming = null;    // id of the note showing "Delete this note?"
   let buttons = new Map();  // `${id}:${kind}` -> the button, to place focus after a redraw
+  let dictation = { stop() {}, clear() {} }; // replaced below when the page has the Dictate button
 
   // --- status --------------------------------------------------------------
   function setError(msg) {
@@ -152,6 +154,7 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
       box.focus();
       return;
     }
+    dictation.stop(); // the microphone is off before the note goes
     const tk = token;
     const btn = $('nt-send');
     btn.disabled = true;
@@ -201,6 +204,7 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
   // Stop listening and ignore anything still on its way.
   function teardown() {
     token += 1;
+    dictation.clear(); // the microphone never outlives the screen, a viewer switch or a sign-out
     sending = false;
     const stop = unsubscribe;
     unsubscribe = null;
@@ -229,6 +233,13 @@ export function createNotes({ data, showScreen, rail = { show() {} }, document: 
   $('nt-new').textContent = 'New note';
   $('nt-send').addEventListener('click', send);
   $('nt-text').addEventListener('input', () => { updateCount(); setError(''); });
+  // Dictation (speech to text): the button exists only in the page markup; it never starts by itself.
+  if ($('nt-dictate')) {
+    dictation = createDictation({
+      win, area: $('nt-text'), button: $('nt-dictate'), previewEl: $('nt-dc-hear'), statusEl: $('nt-dc-status'), alertEl: $('nt-dc-alert'),
+      notice: $('nt-dc-notice'), startBtn: $('nt-dc-start'), noBtn: $('nt-dc-no'),
+    });
+  }
   $('nt-text').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if (!e.repeat) send(); }
   });

@@ -604,3 +604,55 @@ test('a note sent from a journal shows "From her/his journal" by its AUTHOR, oth
   assert.deepEqual(labelOf('cc'), []);
   assert.equal(s.items().length, 3);
 });
+
+// --- dictation on Notes -----------------------------------------------------
+import { makeSpeechWin, engines } from './helpers/fake-speech.js';
+
+function dictSetup(over = {}) {
+  const win = makeSpeechWin();
+  return { ...setup({ ...over, screen: { win, ...(over.screen || {}) } }), win };
+}
+
+test('dictation: the Dictate button shows on Notes but nothing listens until it is pressed', async () => {
+  const s = dictSetup();
+  await s.screen.show('hers');
+  assert.equal(s.$('nt-dictate').hidden, false);
+  assert.equal(engines().length, 0);
+});
+
+test('dictation: heard words land in the composer and the count updates', async () => {
+  const s = dictSetup();
+  await s.screen.show('hers');
+  s.$('nt-dictate').click();
+  engines()[0].say('see you at seven', true);
+  assert.equal(s.$('nt-text').value, 'see you at seven');
+  engines()[0].say('x'.repeat(1990), true);
+  assert.match(s.$('nt-count').textContent, /left|over/, 'the counter heard about the change');
+});
+
+test('dictation: leaving, signing out, showing again and switching viewer each stop the microphone', async () => {
+  for (const how of ['leave', 'clear', 'show', 'switch']) {
+    const s = dictSetup({ screen: { demo: true } });
+    await s.screen.show('hers');
+    s.$('nt-dictate').click();
+    const e = engines()[0];
+    assert.equal(e.running, true);
+    if (how === 'leave') s.screen.leave();
+    else if (how === 'clear') s.screen.clear();
+    else if (how === 'show') await s.screen.show('his');
+    else { s.$('nt-switch').click(); await tick(); await tick(); }
+    assert.equal(e.running, false, how);
+    assert.equal(e.aborted, 1, how);
+  }
+});
+
+test('dictation: Leave note stops dictating, and a refused note keeps the words', async () => {
+  const s = dictSetup();
+  await s.screen.show('hers');
+  s.$('nt-dictate').click();
+  const e = engines()[0];
+  e.say('hello there', true);
+  s.$('nt-send').click(); await tick();
+  assert.equal(e.aborted, 1);
+  assert.deepEqual(s.calls.addNote, ['hello there']);
+});
