@@ -85,6 +85,9 @@ export function createDemoAdapter(given) {
   const emitNotes = () => { for (const cb of noteListeners) cb(readNotes()); };
 
   return {
+    // Nothing to restore in sample mode: ready at once.
+    async ready() {},
+
     async signIn(door) {
       // Notes has no login of its own: callers pick hers or his.
       if (door !== 'hers' && door !== 'his') throw new Error('Sign in as hers or his.');
@@ -182,7 +185,8 @@ export function createDemoAdapter(given) {
       return id;
     },
 
-    listenNotes(cb) {
+    // `onError` is accepted for the shared interface; local storage has nothing to fail asynchronously.
+    listenNotes(cb, onError) {
       requireSession();
       noteListeners.add(cb);
       cb(readNotes());
