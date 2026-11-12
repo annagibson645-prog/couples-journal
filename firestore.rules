@@ -1,0 +1,102 @@
+rules_version = '2';
+
+// Couples Journal security rules. Membership comes from config/members, which is
+// set by hand in the Firebase console and can never be written by a client.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- helpers -------------------------------------------------------
+
+    function membersPath() {
+      return /databases/$(database)/documents/config/members;
+    }
+
+    // Signed in AND listed in config/members.uids.
+    function isMember() {
+      return request.auth != null
+        && exists(membersPath())
+        && request.auth.uid in get(membersPath()).data.uids;
+    }
+
+    function isOwner(uid) {
+      return isMember() && request.auth.uid == uid;
+    }
+
+    function isDayKey(day) {
+      return day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
+    }
+
+    // ---- validation ----------------------------------------------------
+
+    function validMood(d) {
+      return d.keys().hasOnly(['score', 'note', 'updatedAt'])
+        && d.keys().hasAll(['score'])
+        && d.score is int
+        && d.score >= 1 && d.score <= 10
+        && (!('note' in d) || (d.note is string && d.note.size() <= 500))
+        && (!('updatedAt' in d) || d.updatedAt is number);
+    }
+
+    function validEntry(d) {
+      return d.keys().hasOnly(['day', 'text', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['day', 'text', 'createdAt'])
+        && d.day is string && isDayKey(d.day)
+        && d.text is string && d.text.size() >= 1 && d.text.size() <= 200000
+        && d.createdAt is number
+        && (!('updatedAt' in d) || d.updatedAt is number);
+    }
+
+    function validDraft(d) {
+      return d.keys().hasOnly(['text', 'updatedAt'])
+        && d.keys().hasAll(['text'])
+        && d.text is string && d.text.size() <= 200000
+        && (!('updatedAt' in d) || d.updatedAt is number);
+    }
+
+    // authorDoor must be the door config/members gives this very login.
+    function validNote(d) {
+      return d.keys().hasOnly(['authorUid', 'authorDoor', 'text', 'createdAt', 'source'])
+        && d.keys().hasAll(['authorUid', 'authorDoor', 'text', 'createdAt'])
+        && d.authorUid == request.auth.uid
+        && d.authorDoor in ['hers', 'his']
+        && get(membersPath()).data.doors[d.authorDoor] == request.auth.uid
+        && d.text is string && d.text.size() >= 1 && d.text.size() <= 2000
+        && d.createdAt is number
+        && (!('source' in d) || d.source == 'entry');
+    }
+
+    // ---- collections ---------------------------------------------------
+
+    // Membership list: members may read it; nobody may write it from a client.
+    match /config/members {
+      allow read: if isMember();
+      allow write: if false;
+    }
+
+    match /users/{uid}/moods/{day} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isDayKey(day) && validMood(request.resource.data);
+    }
+
+    match /users/{uid}/entries/{id} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validEntry(request.resource.data);
+    }
+
+    // The unsent writing box (one document per person).
+    match /users/{uid}/drafts/{doc} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validDraft(request.resource.data);
+    }
+
+    // Shared notes: members read and add; only the author deletes; never edited.
+    match /notes/{id} {
+      allow read: if isMember();
+      allow create: if isMember() && validNote(request.resource.data);
+      allow update: if false;
+      allow delete: if isMember() && resource.data.authorUid == request.auth.uid;
+    }
+
+    // Everything else (including any other config document) is denied by default.
+  }
+}
