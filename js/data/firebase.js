@@ -79,7 +79,6 @@ export function toFriendly(err) {
 function settle(promise, ms) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(resolve, ms);
-    if (timer && timer.unref) timer.unref();
     promise.then(() => { clearTimeout(timer); resolve(); }, (e) => { clearTimeout(timer); reject(e); });
   });
 }
@@ -139,7 +138,6 @@ export function createFirebaseAdapter({ sdk, config, now = () => Date.now(), pen
       let done = false;
       let off = null;
       const timer = setTimeout(() => finish(null), authWaitMs);
-      if (timer && timer.unref) timer.unref();
       function finish(user) {
         if (done) return;
         done = true;
