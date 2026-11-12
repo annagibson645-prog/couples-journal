@@ -62,6 +62,7 @@ service cloud.firestore {
         && get(membersPath()).data.doors[d.authorDoor] == request.auth.uid
         && d.text is string && d.text.size() >= 1 && d.text.size() <= 2000
         && d.createdAt is number
+        && d.createdAt <= request.time.toMillis() + 300000 // at most 5 minutes ahead; no lower bound, so offline-queued writes still land
         && (!('source' in d) || d.source == 'entry');
     }
 
@@ -84,7 +85,7 @@ service cloud.firestore {
     }
 
     // The unsent writing box (one document per person).
-    match /users/{uid}/drafts/{doc} {
+    match /users/{uid}/drafts/current {
       allow read, delete: if isOwner(uid);
       allow create, update: if isOwner(uid) && validDraft(request.resource.data);
     }

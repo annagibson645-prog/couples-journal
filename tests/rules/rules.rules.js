@@ -240,3 +240,50 @@ describe('config and everything else', () => {
     await assertFails(db.doc('stray/doc').get());
   });
 });
+
+describe('hardening', () => {
+  test('a missing config/members refuses everything, even to the former members', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => { await ctx.firestore().doc('config/members').delete(); });
+    const db = as(HER);
+    await assertFails(db.doc(`users/${HER}/moods/${DAY}`).get());
+    await assertFails(db.doc(`users/${HER}/entries/e3`).set(entry()));
+    await assertFails(db.collection('notes').get());
+    await assertFails(db.doc('notes/n9').set(note(HER, 'hers')));
+    await assertFails(db.doc('config/members').get());
+    await assertFails(db.doc('notes/herNote').delete());
+  });
+
+  test('collection-group queries are refused, even for members', async () => {
+    await assertFails(as(HER).collectionGroup('entries').get());
+    await assertFails(as(HER).collectionGroup('moods').get());
+    await assertFails(as(HER).collectionGroup('notes').get());
+    await assertFails(anon().collectionGroup('entries').get());
+  });
+
+  test('listing the users or config collections is refused', async () => {
+    await assertFails(as(HER).collection('users').get());
+    await assertFails(as(HER).collection('config').get());
+    await assertFails(as(STRANGER).collection('users').get());
+    await assertFails(anon().collection('config').get());
+  });
+
+  test('a stranger cannot delete a note', async () => {
+    await assertFails(as(STRANGER).doc('notes/herNote').delete());
+    await assertFails(anon().doc('notes/hisNote').delete());
+  });
+
+  test('a note dated far in the future is refused; a little ahead or long ago is fine', async () => {
+    const db = as(HER);
+    await assertFails(db.doc('notes/future1').set(note(HER, 'hers', { createdAt: Date.now() + 10 * 60 * 1000 })));
+    await assertFails(db.doc('notes/future2').set(note(HER, 'hers', { createdAt: Date.now() + 365 * 24 * 3600 * 1000 })));
+    await assertSucceeds(db.doc('notes/near').set(note(HER, 'hers', { createdAt: Date.now() + 60 * 1000 })));
+    await assertSucceeds(db.doc('notes/old').set(note(HER, 'hers', { createdAt: 5 })));
+  });
+
+  test('a draft at any id other than current is refused', async () => {
+    const db = as(HER);
+    await assertFails(db.doc(`users/${HER}/drafts/other`).set({ text: 'x' }));
+    await assertFails(db.doc(`users/${HER}/drafts/current2`).set({ text: 'x' }));
+    await assertSucceeds(db.doc(`users/${HER}/drafts/current`).set({ text: 'x' }));
+  });
+});
