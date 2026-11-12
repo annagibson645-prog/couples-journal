@@ -28,6 +28,7 @@ export async function loadFirebaseSdk(importer = (url) => import(url)) {
 export const LIMITS = Object.freeze({ entryText: 200000, draftText: 200000, noteText: 2000, moodNote: 500 });
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DOORS = ['hers', 'his'];
+const APP_NAME = 'journal'; // ONE fixed name: deleteApp frees it, so no old login or cache sits under a name nothing clears
 const DEFAULT_NAMES = { hers: 'Hers', his: 'His' };
 
 const MSG = {
@@ -40,6 +41,7 @@ const MSG = {
   notMember: 'This login is not part of this journal.',
   notSetUp: 'This journal has not been set up yet.',
   generic: 'Something went wrong. Please try again.',
+  expired: 'Your sign-in has run out. Please sign in again.',
   disabled: 'This login has been turned off.',
   blank: 'Write something first.',
   ownNotes: 'You can only delete your own notes.',
@@ -59,6 +61,7 @@ export function toFriendly(err) {
     case 'wrong-password':
     case 'user-not-found':
     case 'invalid-credential':
+    case 'invalid-login-credentials':
     case 'invalid-email':
     case 'missing-password':
       return friendlyError(MSG.signInFailed);
@@ -69,6 +72,7 @@ export function toFriendly(err) {
     case 'permission-denied':
     case 'unauthenticated': return friendlyError(MSG.denied);
     case 'user-disabled': return friendlyError(MSG.disabled);
+    case 'user-token-expired': return friendlyError(MSG.expired);
     default: return friendlyError(MSG.generic);
   }
 }
@@ -83,11 +87,23 @@ function settle(promise, ms) {
   });
 }
 
+// True if the promise finished within `ms`; false if it was still waiting or failed.
+function finishedWithin(promise, ms) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), ms);
+    promise.then(() => { clearTimeout(timer); resolve(true); }, () => { clearTimeout(timer); resolve(false); });
+  });
+}
+
 const finiteOr = (v, fallback) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 
-export function createFirebaseAdapter({ sdk, config, now = () => Date.now(), pendingMs = 8000, authWaitMs = 8000 } = {}) {
+export function createFirebaseAdapter({ sdk, config, now = () => Date.now(), pendingMs = 8000, authWaitMs = 8000, onSessionLost } = {}) {
   if (!sdk) throw new Error('The Firebase SDK is missing.');
-  let generation = 0;
+  let generation = 0; // only used to name an app when 'journal' could not be freed
+  let epoch = 0; // bumps on every sign-out, so a sign-in that was overtaken can tell
+  let stopWatch = null;
+  let wiping = false;
+  let appName = APP_NAME;
   let app = null;
   let auth = null;
   let db = null;
@@ -100,16 +116,34 @@ export function createFirebaseAdapter({ sdk, config, now = () => Date.now(), pen
 
   // A fresh app + auth + database. Called at start and again after every sign-out.
   function build() {
-    generation += 1;
-    app = sdk.initializeApp(config, `journal-${generation}`);
+    app = sdk.initializeApp(config, appName);
     auth = sdk.getAuth(app);
     try {
-      const tabManager = sdk.persistentMultipleTabManager ? sdk.persistentMultipleTabManager() : undefined;
+      // One tab owns the offline cache; any other tab falls back to a memory cache.
+      const tabManager = sdk.persistentSingleTabManager ? sdk.persistentSingleTabManager({}) : undefined;
       db = sdk.initializeFirestore(app, { localCache: sdk.persistentLocalCache(tabManager ? { tabManager } : {}) });
     } catch (e) {
       // No offline storage here (for example a private window): carry on online-only.
       db = sdk.initializeFirestore(app, {});
     }
+    watchAuth();
+  }
+
+  // Lasting listener: if Firebase Auth becomes signed-out (another tab signed out, the account was
+  // removed) while this tab still holds a session, drop the session and tell the app.
+  function watchAuth() {
+    if (stopWatch) { try { stopWatch(); } catch (e) { /* gone */ } stopWatch = null; }
+    try {
+      stopWatch = sdk.onAuthStateChanged(auth, (user) => {
+        if (user || !session || wiping) return;
+        session = null;
+        members = null;
+        memDrafts.clear();
+        for (const stop of [...stops]) stop();
+        stops.clear();
+        if (typeof onSessionLost === 'function') { try { onSessionLost(); } catch (e) { /* the callback must not break auth */ } }
+      });
+    } catch (e) { stopWatch = null; }
   }
 
   const requireSession = () => {
@@ -181,30 +215,50 @@ export function createFirebaseAdapter({ sdk, config, now = () => Date.now(), pen
     try { return await fn(...args); } catch (e) { throw toFriendly(e); }
   };
 
-  async function doSignOut() {
+  // Returns { wiped, unsynced }. Without `force`, writing that has not reached the server yet is NOT
+  // thrown away: nothing is changed and { wiped: false, unsynced: true } comes back so the app can ask.
+  async function doSignOut(force) {
     const oldDb = db;
     const oldApp = app;
     const oldAuth = auth;
     const who = session;
-    session = null;
-    members = null;
-    memDrafts.clear();
-    for (const stop of [...stops]) stop();
-    stops.clear();
-    if (!oldDb) return;
-    // Remove this person's unsent draft from their cloud copy while still signed in (best effort).
-    if (who) {
-      try { await settle(sdk.deleteDoc(sdk.doc(oldDb, 'users', who.uid, 'drafts', 'current')), Math.min(pendingMs, 1500)); } catch (e) { /* best effort */ }
+    let unsynced = false;
+    if (oldDb && who) {
+      unsynced = !(await finishedWithin(sdk.waitForPendingWrites(oldDb), pendingMs));
+      if (unsynced && !force) return { wiped: false, unsynced: true };
     }
-    try { await sdk.signOut(oldAuth); } catch (e) { /* the device cache is cleared below regardless */ }
-    // Empty the offline cache: terminate first (the SDK refuses to clear a running database).
-    try { await sdk.terminate(oldDb); } catch (e) { /* carry on */ }
-    try { await sdk.clearIndexedDbPersistence(oldDb); } catch (e) { /* carry on */ }
-    try { await sdk.deleteApp(oldApp); } catch (e) { /* carry on */ }
-    app = null; auth = null; db = null;
-    // Ready for the next person: a brand new app, auth and database.
-    try { build(); } catch (e) { app = null; auth = null; db = null; }
-    readyPromise = Promise.resolve();
+    epoch += 1;
+    wiping = true;
+    try {
+      session = null;
+      members = null;
+      memDrafts.clear();
+      for (const stop of [...stops]) stop();
+      stops.clear();
+      if (!oldDb) return { wiped: true, unsynced };
+      // Remove this person's unsent draft from their cloud copy while still signed in (best effort).
+      if (who) {
+        try { await settle(sdk.deleteDoc(sdk.doc(oldDb, 'users', who.uid, 'drafts', 'current')), Math.min(pendingMs, 1500)); } catch (e) { /* best effort */ }
+      }
+      let wiped = true;
+      try { await sdk.signOut(oldAuth); } catch (e) { wiped = false; }
+      // Empty the offline cache: terminate first (the SDK refuses to clear a running database).
+      try { await sdk.terminate(oldDb); } catch (e) { wiped = false; }
+      // Fails while another tab still has the database open.
+      try { await sdk.clearIndexedDbPersistence(oldDb); } catch (e) { wiped = false; }
+      let freed = true;
+      try { await sdk.deleteApp(oldApp); } catch (e) { freed = false; }
+      if (stopWatch) { try { stopWatch(); } catch (e) { /* gone */ } stopWatch = null; }
+      app = null; auth = null; db = null;
+      // Ready for the next person: a brand new app, auth and database under the same name
+      // (a different one only if the old app could not be deleted).
+      appName = freed ? APP_NAME : `${APP_NAME}-${++generation}`;
+      try { build(); } catch (e) { app = null; auth = null; db = null; }
+      readyPromise = Promise.resolve();
+      return { wiped, unsynced };
+    } finally {
+      wiping = false;
+    }
   }
 
   return {
@@ -218,10 +272,13 @@ export function createFirebaseAdapter({ sdk, config, now = () => Date.now(), pen
       await queue; // a sign-out in progress finishes first
       await ready();
       if (!auth) throw friendlyError(MSG.generic);
+      const startedAt = epoch;
       const cred = await sdk.signInWithEmailAndPassword(auth, email, password);
+      if (epoch !== startedAt) throw friendlyError(MSG.generic);
       const uid = cred && cred.user && cred.user.uid;
       let m;
       try { m = await loadMembers(); } catch (e) {
+        if (epoch !== startedAt) throw friendlyError(MSG.generic);
         await quietSignOut();
         if (e && e.code === 'permission-denied') throw friendlyError(MSG.notMember);
         throw e;
@@ -232,14 +289,18 @@ export function createFirebaseAdapter({ sdk, config, now = () => Date.now(), pen
         await quietSignOut();
         throw friendlyError(MSG.notMember);
       }
+      if (epoch !== startedAt) throw friendlyError(MSG.generic); // signed out while signing in
       session = { uid, door: actual };
       return session;
     }),
 
-    signOut() {
-      const run = queue.then(doSignOut, doSignOut);
-      queue = run.catch(() => {});
-      return run.catch(() => {});
+    // Never rejects. Resolves { wiped, unsynced }; see doSignOut. `{ force: true }` discards unsynced writing.
+    signOut(opts) {
+      const force = !!(opts && opts.force);
+      const failed = { wiped: false, unsynced: false };
+      const run = queue.then(() => doSignOut(force)).catch(() => failed);
+      queue = run.then(() => {}, () => {});
+      return run;
     },
 
     currentSession() { return session; },

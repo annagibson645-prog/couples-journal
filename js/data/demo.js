@@ -118,6 +118,7 @@ export function createDemoAdapter(given) {
           }
         }
       } catch (e) { /* storage unreadable: nothing more to clear */ }
+      return { wiped: true, unsynced: false }; // nothing is ever unsynced in sample mode; `force` is ignored
     },
 
     currentSession() { return session; },

@@ -47,6 +47,9 @@ export function createFakeFirebase(opts = {}) {
     failWriteCode: null,        // writes fail with this code while set
     holdWrites: false,          // writes apply locally but never resolve (offline)
     resetEmails: [],
+    pendingWrites: 0,           // writes held offline and not yet acknowledged
+    failClearCode: null,        // clearIndexedDbPersistence fails (another tab has the database open)
+    failDeleteAppCode: null,    // deleteApp fails
     nextAuto: 1,
   };
   world.docs.set('config/members', clone(opts.members || {
@@ -103,7 +106,7 @@ export function createFakeFirebase(opts = {}) {
       world.apps.add(name);
       return { name, config };
     },
-    async deleteApp(app) { world.calls.push('deleteApp'); world.apps.delete(app.name); },
+    async deleteApp(app) { world.calls.push('deleteApp'); if (world.failDeleteAppCode) throw codeError(world.failDeleteAppCode); world.apps.delete(app.name); },
 
     getAuth(app) {
       return { app, currentUser: userOf(world.persistedUid) };
@@ -135,7 +138,7 @@ export function createFakeFirebase(opts = {}) {
     },
 
     persistentLocalCache(settings) { return { kind: 'persistent', settings }; },
-    persistentMultipleTabManager() { return { kind: 'multi-tab' }; },
+    persistentSingleTabManager() { return { kind: 'single-tab' }; },
     initializeFirestore(app, settings) {
       world.calls.push('initializeFirestore');
       const db = { kind: 'db', app, settings, terminated: false };
@@ -146,6 +149,7 @@ export function createFakeFirebase(opts = {}) {
     async clearIndexedDbPersistence(db) {
       world.calls.push('clearIndexedDbPersistence');
       if (!db.terminated) throw codeError('failed-precondition', 'Persistence can only be cleared after terminate');
+      if (world.failClearCode) throw codeError(world.failClearCode);
       world.cache.clear();
     },
 
@@ -181,7 +185,7 @@ export function createFakeFirebase(opts = {}) {
       world.docs.set(ref.path, clone(data));
       touch(db, ref.path);
       notify();
-      if (world.holdWrites) return new Promise(() => {});
+      if (world.holdWrites) { world.pendingWrites++; return new Promise(() => {}); }
     },
     async deleteDoc(ref) {
       const db = ref.db;
@@ -189,7 +193,11 @@ export function createFakeFirebase(opts = {}) {
       if (world.failWriteCode) throw codeError(world.failWriteCode);
       world.docs.delete(ref.path);
       notify();
-      if (world.holdWrites) return new Promise(() => {});
+      if (world.holdWrites) { world.pendingWrites++; return new Promise(() => {}); }
+    },
+    async waitForPendingWrites(db) {
+      assertLive(db);
+      if (world.pendingWrites > 0) return new Promise(() => {});
     },
     onSnapshot(q, next, error) {
       const db = q.db;
@@ -221,6 +229,8 @@ export function createFakeFirebase(opts = {}) {
       his: { email: accounts.his.email, password: accounts.his.password },
       stranger: { email: accounts.stranger.email, password: accounts.stranger.password },
     },
+    // Another tab signed this device out.
+    signOutElsewhere() { world.persistedUid = null; fireAuth(); },
     // A path -> data peek at the "server" for assertions.
     read: (path) => (world.docs.has(path) ? clone(world.docs.get(path)) : undefined),
     paths: (prefix) => [...world.docs.keys()].filter((p) => p.startsWith(prefix)),

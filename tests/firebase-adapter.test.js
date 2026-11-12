@@ -112,7 +112,8 @@ test('signOut: ends the session, terminates then clears the device cache, and bu
   assert.equal(firstDb.terminated, true);
   assert.equal(fake.world.dbs.length, 2, 'a fresh database for the next sign-in');
   assert.equal(fake.world.dbs[1].terminated, false);
-  assert.deepEqual([...fake.world.apps], ['journal-2']);
+  assert.deepEqual([...fake.world.apps], ['journal'], 'the same fixed app name is reused');
+  assert.deepEqual(fake.world.calls.filter((c) => c.startsWith('initializeApp')), ['initializeApp:journal', 'initializeApp:journal']);
   assert.equal(data.currentSession(), null);
   // The next person can sign in on the fresh instance.
   const s = await data.signIn('his', fake.credentials.his);
@@ -285,4 +286,113 @@ test('the SDK is loaded from pinned gstatic URLs, and only when asked', async ()
 test('no innerHTML or eval in the adapter', () => {
   const src = readFileSync(new URL('../js/data/firebase.js', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /innerHTML|insertAdjacentHTML|eval\(|new Function/);
+});
+
+test('sign-out and rebuild reuse one fixed app name; nothing from the earlier app keeps a session or cache', async () => {
+  const { fake, data } = make();
+  await data.ready();
+  for (const door of ['hers', 'his', 'hers']) {
+    await data.signIn(door, fake.credentials[door]);
+    await data.addEntry('words');
+    assert.deepEqual(await data.signOut(), { wiped: true, unsynced: false });
+    assert.deepEqual([...fake.world.apps], ['journal']);
+    assert.equal(fake.world.persistedUid, null);
+    assert.equal(fake.world.cache.size, 0);
+  }
+  assert.equal(fake.world.dbs.filter((d) => !d.terminated).length, 1, 'only the newest database is running');
+  assert.ok(fake.world.dbs.every((d, i) => i === fake.world.dbs.length - 1 || d.terminated));
+  assert.equal(fake.world.dbs[0].settings.localCache.settings.tabManager.kind, 'single-tab');
+});
+
+test('if the old app cannot be deleted a unique name is used so the rebuild still works', async () => {
+  const { fake, data } = make();
+  await data.ready();
+  await data.signIn('hers', fake.credentials.hers);
+  fake.world.failDeleteAppCode = 'app/boom';
+  assert.equal((await data.signOut()).wiped, true);
+  assert.ok(fake.world.apps.has('journal-1'));
+  fake.world.failDeleteAppCode = null;
+  const s = await data.signIn('his', fake.credentials.his);
+  assert.equal(s.door, 'his');
+});
+
+test('signOut says so when the device cache could not be cleared (another tab has it open)', async () => {
+  const { fake, data } = make();
+  await data.ready();
+  await data.signIn('hers', fake.credentials.hers);
+  fake.world.failClearCode = 'failed-precondition';
+  const r = await data.signOut();
+  assert.deepEqual(r, { wiped: false, unsynced: false });
+  assert.equal(data.currentSession(), null, 'the person is still signed out');
+});
+
+test('signOut with unsynced writing does nothing unless forced', async () => {
+  const { fake, data } = make({ pendingMs: 15 });
+  await data.ready();
+  await data.signIn('hers', fake.credentials.hers);
+  fake.world.holdWrites = true;
+  await data.addEntry('written offline');
+  const dbBefore = fake.world.dbs[fake.world.dbs.length - 1];
+  const r = await data.signOut();
+  assert.deepEqual(r, { wiped: false, unsynced: true });
+  assert.deepEqual(data.currentSession(), { uid: 'herUid', door: 'hers' }, 'still signed in');
+  assert.equal(dbBefore.terminated, false);
+  assert.equal(fake.world.persistedUid, 'herUid');
+  assert.ok((await data.listEntries()).length === 1, 'the writing is still there');
+  const f = await data.signOut({ force: true });
+  assert.deepEqual(f, { wiped: true, unsynced: true });
+  assert.equal(data.currentSession(), null);
+  assert.equal(dbBefore.terminated, true);
+  assert.equal(fake.world.cache.size, 0);
+});
+
+test('signOut waits for writes that do finish, and reports nothing unsynced', async () => {
+  const { fake, data } = make({ pendingMs: 15 });
+  await data.ready();
+  await data.signIn('hers', fake.credentials.hers);
+  await data.addEntry('synced');
+  assert.deepEqual(await data.signOut(), { wiped: true, unsynced: false });
+});
+
+test('onSessionLost: firebase signing this tab out behind its back clears the session and calls back once', async () => {
+  let lost = 0;
+  const { fake, data } = make({ onSessionLost: () => { lost++; } });
+  await data.ready();
+  await data.signIn('hers', fake.credentials.hers);
+  let notesCalls = 0;
+  data.listenNotes(() => { notesCalls++; });
+  await tick();
+  fake.signOutElsewhere();
+  await tick();
+  assert.equal(lost, 1);
+  assert.equal(data.currentSession(), null);
+  await assert.rejects(data.listEntries(), /Not signed in/);
+  const seen = notesCalls;
+  await tick();
+  assert.equal(notesCalls, seen);
+  // Our own sign-out and sign-in never count as lost.
+  await data.signIn('his', fake.credentials.his);
+  await data.signOut();
+  assert.equal(lost, 1);
+});
+
+test('a sign-in that is overtaken by a sign-out fails with a plain error and sets no session', async () => {
+  const fake = createFakeFirebase();
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const sdk = { ...fake.sdk, signInWithEmailAndPassword: async (...a) => { await gate; return fake.sdk.signInWithEmailAndPassword(...a); } };
+  const data = createFirebaseAdapter({ sdk, config: CONFIG });
+  await data.ready();
+  const attempt = data.signIn('hers', fake.credentials.hers);
+  attempt.catch(() => {});
+  await tick();
+  await data.signOut();
+  release();
+  await assert.rejects(attempt, (e) => /Something went wrong/.test(e.message));
+  assert.equal(data.currentSession(), null);
+});
+
+test('more sign-in error codes are plain sentences', () => {
+  assert.match(toFriendly({ code: 'auth/invalid-login-credentials' }).message, /email and password did not work/);
+  assert.match(toFriendly({ code: 'auth/user-token-expired' }).message, /sign in again/);
 });

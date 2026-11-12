@@ -312,6 +312,14 @@ for (const t of targets) {
       assert.equal(data.currentSession(), null);
     });
 
+    test('signOut resolves { wiped: true, unsynced: false } when nothing is waiting, with or without force', async () => {
+      const { data, login } = await setup();
+      await login('hers');
+      assert.deepEqual(await data.signOut(), { wiped: true, unsynced: false });
+      await login('his');
+      assert.deepEqual(await data.signOut({ force: true }), { wiped: true, unsynced: false });
+    });
+
     test('getMembers returns names and two different doors', async () => {
       const { data, login } = await setup();
       await login('hers');
