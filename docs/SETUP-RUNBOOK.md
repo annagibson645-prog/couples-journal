@@ -16,22 +16,26 @@ last step.
 
 1. Build > Authentication > Get started.
 2. Sign-in method > Email/Password > turn on the first switch (leave "Email link" off) > Save.
-3. If there is a setting that lets new people **sign up** by themselves, turn it off. Only the two
-   accounts below should ever exist. (If your console version has no such switch, the security rules
-   still keep strangers out: anyone not in the member list can read and write nothing.)
+3. The "Enable create (sign-up)" switch only appears after upgrading to Firebase Authentication with
+   Identity Platform. If you do not see it, leave things as they are: the security rules already keep
+   strangers out (anyone not in the member list can read and write nothing). If you do upgrade, turn
+   sign-up off and leave "Email enumeration protection" **on**.
+4. Stay on the free **Spark** plan. If it is ever upgraded, set a budget alert first.
 
 ## 3. Add the two accounts and copy their IDs
 
 1. Authentication > Users > Add user. Add the first person's real email and a password they will
-   remember (they can reset it later from the sign-in screen). Repeat for the second person.
+   remember. Password reset by email is NOT available yet: it arrives with the live login step, so keep the
+   password safe until then. Repeat for the second person.
 2. Each row now shows a **User UID** (a long string of letters and numbers). Copy both somewhere
    handy. You will paste them in step 5. Note which UID belongs to Hers and which to His.
 
 ## 4. Create the database
 
 1. Build > Firestore Database > Create database.
-2. Pick the location closest to you.
-3. Choose **production mode** (not test mode). Finish.
+2. The flow may first ask for an edition (choose **Standard**) and a database ID (leave `(default)`).
+3. Pick the location closest to you.
+4. Choose **production mode** (not test mode). Finish.
 
 ## 5. Tell the database who the two members are
 
@@ -61,15 +65,25 @@ The app reads one document that only the console can write.
 ## 8. Allow the website's address
 
 Authentication > Settings > Authorized domains > Add domain: the address of the published site
-(for example `yourname.github.io`, without `https://` and without a path).
+(for example `yourname.github.io`, without `https://` and without a path). `localhost` is already on
+the list, so testing on your own computer needs nothing here.
+
+Optional hardening: in the Google Cloud console (APIs & Services > Credentials) restrict the browser API
+key to HTTP referrers: the published site's address and `localhost`.
 
 ## 9. Try it safely first (optional but recommended)
 
-Run the site on your own computer and check, before anyone else sees it:
+On your own computer ONLY, temporarily set `enabled: true` in `js/firebase-config.js` and `MODE = 'firebase'`
+in `js/config.js`. **Never commit or publish those two changes.** Then serve the folder and check, before
+anyone else sees it:
 
 - Her login opens Hers, and His login on the Hers form says "This journal is private."
 - A wrong password gives a plain sentence, not a code.
 - Signing out and reloading shows no journal text.
+- Sign out with two tabs of the journal open, then reload: the sign-out should report that the other tab
+  must be closed first, and after closing it and signing out again no journal text remains.
+
+Put both files back to their committed state afterwards.
 
 ## 10. Test the rules (any time the rules change)
 
@@ -85,7 +99,15 @@ They use a throwaway emulator with made-up accounts; they never touch the real p
 
 ## 11. Switch the site over
 
-When everything above is done and the sign-in screen has been connected to real credentials:
+Not yet possible: these are still to do first.
+
+- Show the privacy statement (and "always sign out on a shared device") on the sign-in screen.
+- Wire password reset to the "Forgot password" link.
+- Wire the sign-out confirmation for writing that has not synced yet (`signOut` returns `unsynced: true`).
+- Wire `onSessionLost` so the page reloads when another tab signs out.
+- Connect the sign-in screen to real credentials.
+
+When all of that is done:
 
 1. In `js/firebase-config.js` set `enabled: true`.
 2. In `js/config.js` change `MODE` from `'demo'` to `'firebase'`.

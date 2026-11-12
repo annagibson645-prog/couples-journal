@@ -77,3 +77,27 @@ test('the real-mode privacy statement is kept as a constant', () => {
   assert.match(PRIVACY_STATEMENT, /not end-to-end encrypted/);
   assert.match(PRIVACY_STATEMENT, /No analytics, no trackers\.$/);
 });
+
+test('a failed SDK load shows a friendly message (not the import error) and can be retried', async () => {
+  let tries = 0;
+  const a = pickAdapter('firebase', REAL, async () => {
+    tries++;
+    if (tries === 1) throw new TypeError('Failed to fetch dynamically imported module: https://www.gstatic.com/x');
+    return {
+      loadFirebaseSdk: async () => ({}),
+      createFirebaseAdapter: () => ({ ready: async () => {}, currentSession: () => null }),
+    };
+  });
+  await assert.rejects(a.ready(), (e) => /Couldn't reach Google/.test(e.message) && !/gstatic|dynamically|Failed to fetch/.test(e.message));
+  await a.ready();
+  assert.equal(tries, 2);
+});
+
+test('the lazy facade passes signOut options and results through', async () => {
+  const got = [];
+  const a = createLazyAdapter(async () => ({ ready: async () => {}, signOut: async (o) => { got.push(o); return { wiped: false, unsynced: true }; } }));
+  assert.deepEqual(await a.signOut(), { wiped: true, unsynced: false }, 'nothing loaded: nothing to wipe');
+  await a.ready();
+  assert.deepEqual(await a.signOut({ force: true }), { wiped: false, unsynced: true });
+  assert.deepEqual(got, [{ force: true }]);
+});

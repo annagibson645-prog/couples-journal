@@ -9,7 +9,7 @@ runs one behaviour suite against both. All methods act on the signed-in person's
 ```
 ready(): Promise<void>                                       // resolves once a sign-in from an earlier visit is restored (the demo resolves at once); the app waits for it before opening any door
 signIn(door: 'hers'|'his', credentials?: {email,password}): Promise<Session>   // firebase: `session.door` is the door config/members gives that login, NOT the door asked for (His's login on the Hers form gives door 'his'); a login not in config/members is refused
-signOut(): Promise<void>
+signOut(opts?: { force?: boolean }): Promise<{ wiped: boolean, unsynced: boolean }>   // never rejects; see "Sign-out result" below
 currentSession(): Session|null
 getMembers(): Promise<{ names:{hers,his}, doors:{hers,his} }>
 saveMood(day: string, score: number, note?: string): Promise<void>
@@ -54,9 +54,22 @@ deleteNote(id: string): Promise<void>                      // rejects for a note
 - **Friendly errors only.** Anything shown to a person is a plain sentence. The firebase adapter
   maps wrong password, unknown user, too many tries, offline and permission errors to sentences and
   never exposes a Firebase code or message. Nothing logs credentials, tokens or document contents.
+- **Sign-out result.** `signOut` always resolves `{ wiped, unsynced }`.
+  - `{ wiped: true, unsynced: false }`: signed out and the device is clean (the demo always returns this and ignores `force`).
+  - `{ wiped: false, unsynced: true }`: firebase only. Some writing has not reached the server yet and `force`
+    was not given, so NOTHING was changed (still signed in). Words for the UI: "Some of your writing has not
+    been saved online yet. Signing out now will discard it. Sign out anyway?" Confirming calls `signOut({ force: true })`,
+    which wipes anyway and returns `unsynced: true`.
+  - `{ wiped: false, unsynced: false }`: signed out, but the device copy could not be cleared (another tab of the
+    journal has it open). Words for the UI: "Close the journal's other tabs, then sign out again."
+  Existing callers ignore the result and keep working; the router will use it when the live login is wired.
+- **Session lost.** The firebase adapter takes an optional `onSessionLost()` callback. If Firebase Auth becomes
+  signed-out while this tab still holds a session (another tab signed out, the account was removed), the adapter
+  clears its session and listeners and calls it once. The app will reload there when the live login is wired.
 - **Firebase sign-out** also ends Firebase Auth, empties the Firestore offline cache (`terminate()` then
   `clearIndexedDbPersistence()`), removes the unsent draft from the person's cloud copy, and builds a fresh
-  app and database for the next sign-in. It never rejects. Unsynced offline writes are discarded: privacy wins.
+  app and database for the next sign-in under the same fixed app name (`journal`). It never rejects. Unsynced
+  offline writes are discarded only when the person confirms (`force`).
 - **Limits** (the rules enforce them too): entry text up to 200,000 characters, a note 1-2,000, a mood note up
   to 500. The firebase adapter checks them first and says so in plain words.
 - **Extra on the firebase adapter only:** `sendPasswordReset(email)` (never reveals whether an account exists).

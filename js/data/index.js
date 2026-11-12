@@ -7,6 +7,7 @@ import { firebaseConfig } from '../firebase-config.js';
 import { createDemoAdapter } from './demo.js';
 
 const NOT_CONNECTED = 'This journal is not connected to its storage yet, so nothing can be opened or saved.';
+const NO_GOOGLE = "Couldn't reach Google to start the journal. Check your connection and reload.";
 const NOT_SIGNED_IN = 'Not signed in.';
 
 export function isRealConfig(cfg) {
@@ -23,7 +24,8 @@ export function createLazyAdapter(load) {
   let inner = null;
   let loading = null;
   const ensure = () => {
-    if (!loading) loading = load().then((a) => { inner = a; return a; });
+    // A failed load is not remembered: the next call tries again.
+    if (!loading) loading = load().then((a) => { inner = a; return a; }, (e) => { loading = null; throw e; });
     return loading;
   };
   const forward = (name) => async (...args) => (await ensure())[name](...args);
@@ -36,7 +38,7 @@ export function createLazyAdapter(load) {
     },
     signIn: forward('signIn'),
     // Signing out with nothing loaded is already done.
-    async signOut() { if (inner) await inner.signOut(); },
+    async signOut(opts) { return inner ? inner.signOut(opts) : { wiped: true, unsynced: false }; },
     getMembers: async () => (inner ? inner.getMembers() : { names: { hers: 'Hers', his: 'His' }, doors: { hers: '', his: '' } }),
     sendPasswordReset: forward('sendPasswordReset'),
     saveMood: forward('saveMood'),
@@ -51,16 +53,24 @@ export function createLazyAdapter(load) {
   };
 }
 
-export function pickAdapter(mode = MODE, config = firebaseConfig, loadModule = () => import('./firebase.js')) {
+// `onSessionLost` is called when Firebase signs this tab out behind its back (for example from another tab);
+// the app will reload there once the live login is wired.
+export function pickAdapter(mode = MODE, config = firebaseConfig, loadModule = () => import('./firebase.js'), onSessionLost = null) {
   if (mode === 'demo') return createDemoAdapter();
   if (mode === 'firebase') {
     return createLazyAdapter(async () => {
       if (!isRealConfig(config)) throw new Error(NOT_CONNECTED);
-      const mod = await loadModule();
-      const sdk = await mod.loadFirebaseSdk();
+      let mod;
+      let sdk;
+      try {
+        mod = await loadModule();
+        sdk = await mod.loadFirebaseSdk();
+      } catch (e) {
+        throw new Error(NO_GOOGLE); // never the raw import error
+      }
       const appConfig = { ...config };
       delete appConfig.enabled;
-      return mod.createFirebaseAdapter({ sdk, config: appConfig });
+      return mod.createFirebaseAdapter({ sdk, config: appConfig, onSessionLost: () => { if (typeof onSessionLost === 'function') onSessionLost(); } });
     });
   }
   // Any other value fails closed too: never fall back to sample data by accident.
