@@ -11,7 +11,7 @@ import { createNotes } from './screens/notes.js';
 import { createRail } from './screens/rail.js';
 import { createSendSheet } from './screens/send-sheet.js';
 import { createRouter } from './router.js';
-import { guarded } from './lib/fatal.js';
+import { guarded, reportProblem } from './lib/fatal.js';
 
 // Duplicated in the inline pre-paint script in index.html; keep in sync.
 const THEME_KEY = 'journal-theme';
@@ -91,8 +91,12 @@ function init() {
   const router = createRouter({ demo, data, today, lookback, save, notes, sheet, rails, showScreen, showGate });
   const signOut = router.signOut;
   let doors;
+  // Wait for the data layer (sign-in restored, or the real backend loaded) before any door can open.
+  // Sample mode is ready at once; if the real backend cannot start, the message says so.
+  const ready = Promise.resolve(data.ready());
+  ready.catch(reportProblem);
   // A door that fails to open shows a visible message with Reload instead of doing nothing.
-  const open = guarded((door) => doors.openDoor(door));
+  const open = guarded(async (door) => { await ready; return doors.openDoor(door); });
   const signIn = createSignIn({
     data,
     demo,
@@ -100,7 +104,7 @@ function init() {
     onSignedIn: (who, returnTo) => open(returnTo || who),
     onBack: () => showScreen('front'),
   });
-  doors = createDoors({ data, demo, today, lookback, save, notes, signIn, showGate });
+  ready.then(() => { doors = createDoors({ data, demo, today, lookback, save, notes, signIn, showGate }); }, () => {});
   // Sample mode: Reset sample data wipes everything (the same path as a real sign-out), then shows the front page.
   const banner = createBanner({ onReset: signOut });
   banner.show(demo);

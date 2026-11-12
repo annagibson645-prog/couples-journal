@@ -6,7 +6,8 @@ The live site is a sample-mode preview with invented data; nothing typed there i
 
 - Run locally: serve this folder with any static server (for example `npx serve .`) and open it.
 - Test: `npm test` (Node's built-in test runner, nothing to install).
-- `js/config.js` sets `MODE`. `'demo'` keeps sample data in the browser only and shows a banner saying so.
+- `js/config.js` sets `MODE`. `'demo'` keeps sample data in the browser only and shows a banner saying so. `'firebase'` uses the real backend (`js/data/firebase.js`, settings in `js/firebase-config.js`, rules in `firestore.rules`) and fails closed until it is configured. Setup steps: `docs/SETUP-RUNBOOK.md`.
+- Rules tests (`tests/rules/*.rules.js`) need the Firestore emulator and Java, so they run in GitHub Actions (`.github/workflows/rules.yml`) or with `npm install && npm run test:rules`; `npm test` stays offline and needs no install.
 
 No real journal text is ever committed to this repository.
 

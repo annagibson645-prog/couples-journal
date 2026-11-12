@@ -6,6 +6,7 @@ import './data/demo.js';
 import './data/index.js';
 import './data/sample-seed.js';
 import './doors.js';
+import './firebase-config.js';
 import './lib/chart.js';
 import './lib/clone.js';
 import './lib/days.js';
